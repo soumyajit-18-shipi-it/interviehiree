@@ -1,0 +1,161 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+
+:root {
+  --background: #f0f0ff;
+  --foreground: #0d0d2b;
+  --card: #ffffff;
+  --card-foreground: #0d0d2b;
+  --popover: #ffffff;
+  --popover-foreground: #0d0d2b;
+  --primary: #4F46E5;
+  --primary-foreground: #ffffff;
+  --secondary: #f8f7ff;
+  --secondary-foreground: #0d0d2b;
+  --success: #059669;
+  --success-foreground: #ffffff;
+  --warning: #d97706;
+  --warning-foreground: #ffffff;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --muted: #ede9fe;
+  --muted-foreground: #6b7280;
+  --accent: #ede9fe;
+  --accent-foreground: #0d0d2b;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #ddd6fe;
+  --input: #ddd6fe;
+  --ring: #4F46E5;
+  --radius: 0.75rem;
+
+  --chart-1: #4F46E5;
+  --chart-2: #059669;
+  --chart-3: #d97706;
+  --chart-4: #dc2626;
+  --chart-5: #7c3aed;
+
+  /* Legacy & Glass Mappings */
+  --color-text-title: #0d0d2b;
+  --color-text-sub: #6b7280;
+  --color-glass: rgba(255, 255, 255, 0.85);
+  --color-glass-border: rgba(221, 214, 254, 0.8);
+  --color-gradient-from: #4F46E5;
+  --color-gradient-to: #7c3aed;
+  --color-card-hover: rgba(79, 70, 229, 0.04);
+  
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0d0d2b;
+  --sidebar-primary: #4F46E5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f8f7ff;
+  --sidebar-accent-foreground: #0d0d2b;
+  --sidebar-border: #ddd6fe;
+  --sidebar-ring: #4F46E5;
+}
+
+@theme inline {
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+
+  --color-text-title: var(--color-text-title);
+  --color-text-sub: var(--color-text-sub);
+  --color-glass: var(--color-glass);
+  --color-glass-border: var(--color-glass-border);
+  --color-gradient-from: var(--color-gradient-from);
+  --color-gradient-to: var(--color-gradient-to);
+  --color-card-hover: var(--color-card-hover);
+
+  --color-card: var(--card);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-border: var(--border);
+  --color-radius: var(--radius);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-popover: var(--popover);
+  --color-primary: var(--primary);
+  --color-sidebar: var(--sidebar);
+  --color-font-mono: var(--font-mono);
+  --color-font-sans: var(--font-sans);
+  --color-secondary: var(--secondary);
+  --color-background: var(--background);
+  --color-font-serif: var(--font-serif);
+  --color-foreground: var(--foreground);
+  --color-destructive: var(--destructive);
+  --color-shadow-blur: var(--shadow-blur);
+  --color-shadow-color: var(--shadow-color);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-shadow-spread: var(--shadow-spread);
+  --color-shadow-opacity: var(--shadow-opacity);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-card-foreground: var(--card-foreground);
+  --color-shadow-offset-x: var(--shadow-offset-x);
+  --color-shadow-offset-y: var(--shadow-offset-y);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    @apply antialiased transition-colors duration-300;
+  }
+
+  /* Keep chart/graph areas using system font stack */
+  .recharts-wrapper,
+  .recharts-surface,
+  .recharts-text {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-[var(--color-gradient-from)] to-[var(--color-gradient-to)];
+}
+
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+}
+
+.glass-panel {
+  background: var(--color-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-glass-border);
+  @apply rounded-2xl shadow-xl overflow-hidden;
+}
+
+/* Custom Chart Tooltip Styling */
+.recharts-default-tooltip {
+  @apply !bg-[var(--popover)] !border-[var(--border)] !rounded-xl !shadow-2xl !backdrop-blur-md !px-4 !py-3 !border;
+}
+
+.recharts-tooltip-label {
+  @apply !text-[var(--foreground)] !font-semibold !mb-1;
+}
+
+.recharts-tooltip-item {
+  @apply !text-[var(--muted-foreground)] !text-xs;
+}
