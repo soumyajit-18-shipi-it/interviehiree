@@ -36,7 +36,7 @@ export default function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
       initial={{ width: 72 }}
       animate={{ width: isExpanded ? 240 : 72 }}
       transition={{ type: 'spring', stiffness: 320, damping: 32 }}
-      className="h-screen fixed left-0 top-0 bottom-0 bg-sidebar border-r border-sidebar-border z-50 flex flex-col overflow-hidden shadow-lg shadow-primary/5"
+      className="h-screen fixed left-0 top-0 bottom-0 bg-sidebar border-r border-sidebar-border z-[100] flex flex-col overflow-hidden shadow-lg shadow-primary/5"
     >
       {/* Logo Header */}
       <div className="flex items-center h-20 px-4 gap-3 border-b border-sidebar-border/50">

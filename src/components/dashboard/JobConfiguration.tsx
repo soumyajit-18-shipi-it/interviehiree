@@ -546,10 +546,18 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
               const isActive = activeStage === stage.id;
               return (
                 <div key={stage.id} className="relative">
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setActiveStage(stage.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setActiveStage(stage.id);
+                      }
+                    }}
                     className={clsx(
-                      'w-full text-left bg-card border p-4 rounded-2xl shadow-sm transition-all duration-200 cursor-pointer group',
+                      'w-full text-left bg-card border p-4 rounded-2xl shadow-sm transition-all duration-200 cursor-pointer group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       isActive
                         ? 'border-primary/40 bg-primary/5 shadow-md shadow-primary/10'
                         : 'border-border hover:border-primary/20 hover:shadow-md'
@@ -588,7 +596,7 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
                         <span className="text-[10px] font-bold text-primary/70 uppercase tracking-wider">Configuring →</span>
                       </div>
                     )}
-                  </button>
+                  </div>
 
                   {index < stages.length - 1 && (
                     <div className="h-4 flex justify-center items-center">

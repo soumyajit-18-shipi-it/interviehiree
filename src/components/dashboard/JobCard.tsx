@@ -101,9 +101,9 @@ export default function JobCard({ job, onStatClick }: JobCardProps) {
             <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold ring-1 ring-primary/10">A</div>
             <span className="text-xs text-muted-foreground font-medium">Alpha <span className="text-muted-foreground/70">(me)</span></span>
           </div>
-          <span className="text-border mx-1">//</span>
+          <span className="text-border mx-1"></span>
           <button className="flex items-center gap-1 text-xs font-bold text-foreground hover:text-primary transition-all uppercase tracking-wide">
-            📄 JOB DESCRIPTION
+             JOB DESCRIPTION
           </button>
         </div>
         
