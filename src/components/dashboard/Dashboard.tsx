@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Users, ChevronLeft, Briefcase, X, FileText, MapPin, Clock } from 'lucide-react';
+import { Plus, Search, Users, Briefcase, X, FileText, MapPin, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
 import JobCard from './JobCard';
 import JobDetails from './JobDetails';
@@ -14,14 +14,15 @@ interface Job {
   role: string;
   createdDate: string;
   status: JobStatus;
+  createdBy: string;
   stats: { total: number; resume: number; screening: number; interview: number };
 }
 
 const initialJobs: Job[] = [
-  { id: '1', title: 'Senior Product Designer', role: 'Design • Remote', createdDate: 'Mar 18, 2026', status: 'Published', stats: { total: 142, resume: 85, screening: 32, interview: 12 } },
-  { id: '2', title: 'Full Stack Engineer', role: 'Engineering • NY', createdDate: 'Mar 15, 2026', status: 'Published', stats: { total: 204, resume: 120, screening: 45, interview: 15 } },
-  { id: '3', title: 'Marketing Manager', role: 'Growth • Remote', createdDate: 'Mar 12, 2026', status: 'Draft', stats: { total: 0, resume: 0, screening: 0, interview: 0 } },
-  { id: '4', title: 'Security Engineer', role: 'Engineering • Remote', createdDate: 'Feb 28, 2026', status: 'Archived', stats: { total: 89, resume: 45, screening: 12, interview: 4 } },
+  { id: '1', title: 'Senior Product Designer', role: 'Design • Remote', createdDate: 'Mar 18, 2026', createdBy: 'Alice', status: 'Published', stats: { total: 142, resume: 85, screening: 32, interview: 12 } },
+  { id: '2', title: 'Full Stack Engineer', role: 'Engineering • NY', createdDate: 'Mar 15, 2026', createdBy: 'Bob', status: 'Published', stats: { total: 204, resume: 120, screening: 45, interview: 15 } },
+  { id: '3', title: 'Marketing Manager', role: 'Growth • Remote', createdDate: 'Mar 12, 2026', createdBy: 'Alice', status: 'Draft', stats: { total: 0, resume: 0, screening: 0, interview: 0 } },
+  { id: '4', title: 'Security Engineer', role: 'Engineering • Remote', createdDate: 'Feb 28, 2026', createdBy: 'Charlie', status: 'Archived', stats: { total: 89, resume: 45, screening: 12, interview: 4 } },
 ];
 
 function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job) => void }) {
@@ -45,6 +46,7 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
       title: title.trim(),
       role: `${department} • ${location}`,
       createdDate: dateStr,
+      createdBy: 'Me',
       status,
       stats: { total: 0, resume: 0, screening: 0, interview: 0 },
     });
@@ -201,6 +203,7 @@ type FilterStatus = JobStatus | 'All';
 export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>(initialJobs);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('All');
+  const [createdByFilter, setCreatedByFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<'config' | 'responses' | null>(null);
@@ -226,10 +229,13 @@ export default function Dashboard() {
     setJobs(prev => [job, ...prev]);
   };
 
+  const creatorOptions = ['All', ...Array.from(new Set(jobs.map(job => job.createdBy)))];
+
   const filteredJobs = jobs.filter(job => {
     const matchesStatus = activeFilter === 'All' || job.status === activeFilter;
     const matchesSearch = job.title.toLowerCase().includes(search.toLowerCase());
-    return matchesStatus && matchesSearch;
+    const matchesCreator = createdByFilter === 'All' || job.createdBy === createdByFilter;
+    return matchesStatus && matchesSearch && matchesCreator;
   });
 
   const filterTabs: FilterStatus[] = ['All', 'Published', 'Draft', 'Archived'];
@@ -343,11 +349,19 @@ export default function Dashboard() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button className="flex items-center gap-2 px-4 py-1.5 bg-card border border-border rounded-full text-xs font-medium text-muted-foreground hover:bg-muted transition-colors shadow-sm">
-                  <Users size={14} />
-                  <span>Created by: <span className="text-primary font-semibold">All</span></span>
-                  <ChevronLeft size={14} className="-rotate-90" />
-                </button>
+                <Users size={14} className="text-muted-foreground" />
+                <label className="text-xs font-medium text-muted-foreground">Created by:</label>
+                <select
+                  value={createdByFilter}
+                  onChange={(e) => setCreatedByFilter(e.target.value)}
+                  className="px-3 py-1.5 bg-card border border-border rounded-full text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  {creatorOptions.map((creator) => (
+                    <option key={creator} value={creator}>
+                      {creator}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 

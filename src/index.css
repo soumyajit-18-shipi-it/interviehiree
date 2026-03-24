@@ -120,6 +120,10 @@
     @apply antialiased transition-colors duration-300;
   }
 
+  select {
+    @apply px-4 py-2 bg-card border border-border rounded-xl text-sm text-foreground appearance-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 transition-colors shadow-sm;
+  }
+
   /* Keep chart/graph areas using system font stack */
   .recharts-wrapper,
   .recharts-surface,

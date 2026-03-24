@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Bell, CreditCard, Shield, X, Check, Camera, Mail, Phone, Building, Save } from 'lucide-react';
+import { User, Bell, Shield, X, Check, Camera, Mail, Phone, Building, Save } from 'lucide-react';
 import { clsx } from 'clsx';
 
 function CookieModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -310,94 +310,6 @@ function NotificationsTab() {
   );
 }
 
-// ---- Billing Tab ----
-function BillingTab() {
-  const used = 450;
-  const total = 1000;
-  const pct = (used / total) * 100;
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-xl font-bold text-foreground">Billing & Plan</h3>
-        <p className="text-sm text-muted-foreground mt-1">Manage your subscription and credit usage.</p>
-      </div>
-
-      {/* Current Plan */}
-      <div className="p-6 border border-primary/30 bg-primary/5 rounded-2xl flex items-center justify-between">
-        <div>
-          <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">Current Plan</p>
-          <p className="text-2xl font-black text-foreground">Growth</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Renews on April 21, 2026 · $149/mo</p>
-        </div>
-        <div className="flex flex-col gap-2 items-end">
-          <span className="px-3 py-1 bg-success/10 text-success border border-success/20 rounded-full text-xs font-bold">Active</span>
-          <button className="text-xs text-primary font-bold hover:underline">Upgrade Plan →</button>
-        </div>
-      </div>
-
-      {/* Credit Usage */}
-      <div className="p-6 border border-border bg-muted/20 rounded-2xl space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="font-bold text-foreground">AI Credits</p>
-          <p className="text-sm font-bold text-foreground">{used} <span className="text-muted-foreground font-medium">/ {total} used</span></p>
-        </div>
-        <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${pct}%` }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-            className={clsx('h-3 rounded-full', pct > 80 ? 'bg-danger' : 'bg-primary')}
-          />
-        </div>
-        <p className="text-xs text-muted-foreground">{total - used} credits remaining this billing cycle.</p>
-      </div>
-
-      {/* Payment Method */}
-      <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Payment Method</p>
-        <div className="p-4 border border-border rounded-2xl bg-card flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-7 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-md flex items-center justify-center">
-              <CreditCard size={14} className="text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground">Visa ending in 4242</p>
-              <p className="text-xs text-muted-foreground">Expires 08 / 2028</p>
-            </div>
-          </div>
-          <button className="text-xs text-primary font-bold hover:underline">Update</button>
-        </div>
-      </div>
-
-      {/* Invoice History */}
-      <div>
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Recent Invoices</p>
-        <div className="space-y-2">
-          {[
-            { date: 'Mar 21, 2026', amount: '$149.00', status: 'Paid' },
-            { date: 'Feb 21, 2026', amount: '$149.00', status: 'Paid' },
-            { date: 'Jan 21, 2026', amount: '$99.00', status: 'Paid' },
-          ].map((inv, i) => (
-            <div key={i} className="p-4 border border-border rounded-xl flex items-center justify-between bg-card hover:bg-muted/30 transition-colors cursor-pointer">
-              <div>
-                <p className="text-sm font-semibold text-foreground">{inv.date}</p>
-                <p className="text-xs text-muted-foreground">Growth Plan</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-foreground">{inv.amount}</span>
-                <span className="px-2 py-0.5 bg-success/10 text-success border border-success/20 rounded-full text-[10px] font-bold">
-                  {inv.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ---- Data & Privacy Tab ----
 function DataPrivacyTab({ onOpenCookies }: { onOpenCookies: () => void }) {
   return (
@@ -449,7 +361,6 @@ export default function SettingsView() {
   const tabs = [
     { id: 'Profile', icon: User },
     { id: 'Notifications', icon: Bell },
-    { id: 'Billing', icon: CreditCard },
     { id: 'Data & Privacy', icon: Shield },
   ];
 
@@ -457,7 +368,6 @@ export default function SettingsView() {
     switch (activeTab) {
       case 'Profile': return <ProfileTab />;
       case 'Notifications': return <NotificationsTab />;
-      case 'Billing': return <BillingTab />;
       case 'Data & Privacy': return <DataPrivacyTab onOpenCookies={() => setIsCookieModalOpen(true)} />;
       default: return null;
     }
