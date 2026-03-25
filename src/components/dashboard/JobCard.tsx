@@ -20,10 +20,10 @@ interface JobCardProps {
 
 export default function JobCard({ job, onStatClick }: JobCardProps) {
   return (
-    <div className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group h-full">
+    <div className="bg-card border border-border rounded-2xl p-4 md:p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col group h-full">
       {/* Top Section */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1 pr-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-3 sm:gap-0">
+        <div className="flex-1 pr-0 sm:pr-4">
           <h3 className="font-bold text-foreground text-lg group-hover:text-primary transition-colors line-clamp-1" title={job.title}>
             {job.title}
           </h3>
@@ -32,7 +32,7 @@ export default function JobCard({ job, onStatClick }: JobCardProps) {
             <span>Role: <span className="font-medium text-foreground">{job.role}</span></span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-start">
           {job.status === 'Published' && (
              <span className="bg-success/10 text-success border border-success/20 px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5">
                <CheckCircle size={12} />
@@ -56,7 +56,7 @@ export default function JobCard({ job, onStatClick }: JobCardProps) {
       </div>
 
       {/* Pipeline Progress Strip */}
-      <div className="flex items-center justify-between mb-8 px-2 relative">
+      <div className="flex items-center justify-between mb-8 px-2 relative w-full overflow-x-auto pb-4 scrollbar-hide shrink-0 min-w-min">
         <WorkflowNode 
           label="Total" 
           count={job.stats.total} 
@@ -95,21 +95,21 @@ export default function JobCard({ job, onStatClick }: JobCardProps) {
       </div>
 
       {/* Card Footer */}
-      <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
+      <div className="mt-auto pt-4 border-t border-border flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold ring-1 ring-primary/10">A</div>
             <span className="text-xs text-muted-foreground font-medium">Alpha <span className="text-muted-foreground/70">(me)</span></span>
           </div>
-          <span className="text-border mx-1"></span>
-          <button className="flex items-center gap-1 text-xs font-bold text-foreground hover:text-primary transition-all uppercase tracking-wide">
+          <span className="text-border mx-1">|</span>
+          <button className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-foreground hover:text-primary transition-all uppercase tracking-wide">
              JOB DESCRIPTION
           </button>
         </div>
         
         <div className="flex items-center">
           {job.status === 'Published' && (
-            <button className="flex items-center gap-1.5 text-primary text-xs font-bold hover:underline bg-primary/5 px-2.5 py-1.5 rounded-lg transition-colors border border-primary/10">
+            <button className="flex items-center justify-center w-full md:w-auto gap-1.5 text-primary text-xs font-bold hover:underline bg-primary/5 px-2.5 py-2 rounded-lg transition-colors border border-primary/10">
               Functional Interview Link <Copy size={14} className="ml-1" />
             </button>
           )}

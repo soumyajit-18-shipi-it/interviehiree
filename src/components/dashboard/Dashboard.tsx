@@ -104,7 +104,7 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
           </div>
 
           {/* Department + Location */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">Department</label>
               <select
@@ -296,15 +296,15 @@ export default function Dashboard() {
             className="space-y-8"
           >
             {/* Top Header */}
-            <div className="flex items-center justify-between pb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-4 md:gap-0">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                   Jobs
                 </h1>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="relative w-80">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
+                <div className="relative w-full sm:w-80">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                   <input
                     type="text"
@@ -325,9 +325,9 @@ export default function Dashboard() {
             </div>
 
             {/* Filter Toolbar */}
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div className="flex bg-muted/50 p-1 rounded-full border border-border/50">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-hide">
+                <div className="flex bg-muted/50 p-1 rounded-full border border-border/50 whitespace-nowrap min-w-max">
                   {filterTabs.map((tab) => {
                     const jobCount = tab === 'All' ? jobs.length : jobs.filter(j => j.status === tab).length;
                     return (
@@ -335,7 +335,7 @@ export default function Dashboard() {
                         key={tab}
                         onClick={() => setActiveFilter(tab)}
                         className={clsx(
-                          'relative px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-300',
+                          'relative px-4 sm:px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-300',
                           activeFilter === tab
                             ? 'bg-primary text-primary-foreground shadow-md'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -348,13 +348,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Users size={14} className="text-muted-foreground" />
-                <label className="text-xs font-medium text-muted-foreground">Created by:</label>
+              <div className="flex items-center gap-2 w-full md:w-auto mt-2 md:mt-0">
+                <Users size={14} className="text-muted-foreground hidden sm:block" />
+                <label className="text-xs font-medium text-muted-foreground whitespace-nowrap">Created by:</label>
                 <select
                   value={createdByFilter}
                   onChange={(e) => setCreatedByFilter(e.target.value)}
-                  className="px-3 py-1.5 bg-card border border-border rounded-full text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="px-3 py-1.5 bg-card border border-border rounded-full text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 w-full sm:w-auto"
                 >
                   {creatorOptions.map((creator) => (
                     <option key={creator} value={creator}>
@@ -368,7 +368,7 @@ export default function Dashboard() {
             {/* Jobs Grid */}
             <AnimatePresence mode="popLayout">
               <motion.div
-                className="grid grid-cols-1 xl:grid-cols-2 gap-6"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
                 layout
               >
                 {filteredJobs.map((job) => (
