@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Users, Briefcase, X, FileText, MapPin, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
 import JobCard from './JobCard';
 import JobDetails from './JobDetails';
 import JobConfiguration from './JobConfiguration';
-
+import { getJobs, createJob, updateJob } from "../../api/jobs";
 type JobStatus = 'Published' | 'Draft' | 'Archived';
 
 interface Job {
@@ -17,13 +17,6 @@ interface Job {
   createdBy: string;
   stats: { total: number; resume: number; screening: number; interview: number };
 }
-
-const initialJobs: Job[] = [
-  { id: '1', title: 'Senior Product Designer', role: 'Design • Remote', createdDate: 'Mar 18, 2026', createdBy: 'Alice', status: 'Published', stats: { total: 142, resume: 85, screening: 32, interview: 12 } },
-  { id: '2', title: 'Full Stack Engineer', role: 'Engineering • NY', createdDate: 'Mar 15, 2026', createdBy: 'Bob', status: 'Published', stats: { total: 204, resume: 120, screening: 45, interview: 15 } },
-  { id: '3', title: 'Marketing Manager', role: 'Growth • Remote', createdDate: 'Mar 12, 2026', createdBy: 'Alice', status: 'Draft', stats: { total: 0, resume: 0, screening: 0, interview: 0 } },
-  { id: '4', title: 'Security Engineer', role: 'Engineering • Remote', createdDate: 'Feb 28, 2026', createdBy: 'Charlie', status: 'Archived', stats: { total: 89, resume: 45, screening: 12, interview: 4 } },
-];
 
 function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job) => void }) {
   const [title, setTitle] = useState('');
@@ -201,7 +194,7 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
 type FilterStatus = JobStatus | 'All';
 
 export default function Dashboard() {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const [jobs, setJobs] = useState<Job[]>([]);
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('All');
   const [createdByFilter, setCreatedByFilter] = useState('All');
   const [search, setSearch] = useState('');
@@ -210,7 +203,48 @@ export default function Dashboard() {
   const [initialTab, setInitialTab] = useState<'Overview' | 'Resume Analysis' | 'Recruiter Screening'>('Overview');
   const [isLoading, setIsLoading] = useState(false);
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
+  
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        const data = await getJobs("645711f6-b3a9-5997-a467-d058e3c17ed2");
+    
+        console.log("FULL RESPONSE:", data);
+    
+        if (!data || !data.results) {
+          console.error("Invalid response:", data);
+          setJobs([]);
+          return;
+        }
+    
+        const formattedJobs = data.results.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          role: `${job.business_unit || job.role} • ${job.location || "Remote"}`,
+          createdDate: new Date().toLocaleDateString(),
+          createdBy: job.created_by || "Unknown",
+          status:
+            job.status === "published"
+              ? "Published"
+              : job.status === "draft"
+              ? "Draft"
+              : "Archived",
+          stats: {
+            total: job.total_candidates,
+            resume: job.resume_analysis,
+            screening: job.recruiter_screening,
+            interview: job.functional_interview,
+          },
+        }));
+    
+        setJobs(formattedJobs);
+      } catch (err) {
+        console.error("Error fetching jobs:", err);
+      }
+    };
 
+    fetchJobs();
+  }, []);
   const handleJobClick = (job: Job, tab?: any) => {
     setIsLoading(true);
     setSelectedJob(job);
@@ -225,10 +259,94 @@ export default function Dashboard() {
     }, 800);
   };
 
-  const handleAddJob = (job: Job) => {
-    setJobs(prev => [job, ...prev]);
+  const handleAddJob = async (job: any) => {
+    try {
+      const payload = {
+        title: job.title,
+        status: job.status.toLowerCase(),
+        role: job.role,
+        location: job.role.split(" • ")[1],
+        business_unit: job.role.split(" • ")[0],
+        organization: "645711f6-b3a9-5997-a467-d058e3c17ed2",
+      };
+  
+      console.log("SENDING PAYLOAD:", payload);
+  
+      await createJob(payload);
+  
+      // optional: refetch instead of manual add (better)
+      const refreshed = await getJobs("645711f6-b3a9-5997-a467-d058e3c17ed2");
+  
+      setJobs(
+        refreshed.results.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          role: `${job.business_unit} • ${job.location}`,
+          createdDate: new Date().toLocaleDateString(),
+          createdBy: job.created_by || "Unknown",
+          status:
+            job.status === "published"
+              ? "Published"
+              : job.status === "draft"
+              ? "Draft"
+              : "Archived",
+          stats: {
+            total: job.total_candidates,
+            resume: job.resume_analysis,
+            screening: job.recruiter_screening,
+            interview: job.functional_interview,
+          },
+        }))
+      );
+    } catch (err) {
+      console.error("Create failed", err);
+    }
   };
-
+  const handleUpdateJob = async (updatedJob: any) => {
+    try {
+      const payload = {
+        title: updatedJob.title,
+        role: updatedJob.role,
+        status: updatedJob.status.toLowerCase(), // ✅ important
+        location: updatedJob.role.split(" • ")[1],
+        business_unit: updatedJob.role.split(" • ")[0],
+        organization: "645711f6-b3a9-5997-a467-d058e3c17ed2",
+      };
+  
+      console.log("UPDATING PAYLOAD:", payload);
+  
+      await updateJob(updatedJob.id, payload);
+  
+      // ✅ BEST: refetch after update
+      const refreshed = await getJobs("645711f6-b3a9-5997-a467-d058e3c17ed2");
+  
+      setJobs(
+        refreshed.results.map((job: any) => ({
+          id: job.id,
+          title: job.title,
+          role: `${job.business_unit} • ${job.location}`,
+          createdDate: new Date().toLocaleDateString(),
+          createdBy: job.created_by || "Unknown",
+          status:
+            job.status === "published"
+              ? "Published"
+              : job.status === "draft"
+              ? "Draft"
+              : "Archived",
+          stats: {
+            total: job.total_candidates,
+            resume: job.resume_analysis,
+            screening: job.recruiter_screening,
+            interview: job.functional_interview,
+          },
+        }))
+      );
+  
+      console.log("Updated successfully");
+    } catch (err) {
+      console.error("Update failed:", err);
+    }
+  };
   const creatorOptions = ['All', ...Array.from(new Set(jobs.map(job => job.createdBy)))];
 
   const filteredJobs = jobs.filter(job => {
@@ -237,6 +355,7 @@ export default function Dashboard() {
     const matchesCreator = createdByFilter === 'All' || job.createdBy === createdByFilter;
     return matchesStatus && matchesSearch && matchesCreator;
   });
+  console.log("FILTERED JOBS:", filteredJobs);
 
   const filterTabs: FilterStatus[] = ['All', 'Published', 'Draft', 'Archived'];
 
@@ -273,11 +392,12 @@ export default function Dashboard() {
           ) : (
             viewMode === 'config' ? (
               <JobConfiguration
-                key="config"
-                job={selectedJob}
-                onBack={() => { setSelectedJob(null); setViewMode(null); }}
-                onViewResponses={() => setViewMode('responses')}
-              />
+  key="config"
+  job={selectedJob}
+  onBack={() => { setSelectedJob(null); setViewMode(null); }}
+  onViewResponses={() => setViewMode('responses')}
+  onSave={handleUpdateJob}
+/>
             ) : (
               <JobDetails
                 key="details"

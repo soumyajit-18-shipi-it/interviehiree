@@ -423,7 +423,8 @@ function InterviewPanel() {
 }
 
 // ─── Career Page Panel (existing, now extracted) ──────────────────────────
-function CareerPagePanel({ job }: { job: any }) {
+function CareerPagePanel({ job, setEditableJob }: any) {
+  const [isEditing, setIsEditing] = useState(false);
   return (
     <div className="flex flex-col min-h-full">
       <div className="flex items-center gap-2 mb-6">
@@ -440,14 +441,27 @@ function CareerPagePanel({ job }: { job: any }) {
       <div className="border border-border rounded-xl p-6 bg-background flex-1 flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-sm text-foreground uppercase tracking-wider">Job Description</h3>
-          <button className="flex items-center gap-1.5 text-primary text-xs font-bold hover:underline">
-            <Edit size={12} /> Edit
-          </button>
+          <button
+  onClick={() => setIsEditing(true)}
+  className="flex items-center gap-1.5 text-primary text-xs font-bold hover:underline"
+>
+  <Edit size={12} /> Edit
+</button>
         </div>
 
         <div className="prose prose-sm max-w-none text-muted-foreground flex-1">
-          <h1 className="text-2xl font-black text-foreground mb-1">{job.title}</h1>
-          <p className="text-sm font-semibold text-foreground mb-3">Alpha • 📍 Delhi, India</p>
+        <input
+  value={job.title}
+  disabled={!isEditing}
+  onChange={(e) =>
+    setEditableJob((prev: any) => ({
+      ...prev,
+      title: e.target.value
+    }))
+  }
+  className="text-2xl font-black text-foreground mb-1 bg-transparent border-b border-border focus:outline-none disabled:opacity-60"
+/>          
+<p className="text-sm font-semibold text-foreground mb-3">Alpha • 📍 Delhi, India</p>
           <div className="flex gap-2 mb-6">
             <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">Full Time</span>
             <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">Fresher</span>
@@ -476,7 +490,7 @@ function CareerPagePanel({ job }: { job: any }) {
 }
 
 // ─── Main Export ──────────────────────────────────────────────────────────
-export default function JobConfiguration({ job, onBack, onViewResponses }: any) {
+export default function JobConfiguration({ job, onBack, onViewResponses, onSave }: any) {
   const [stages, setStages] = useState([
     { id: 'career', name: '1 · Career Page', shortName: 'Career Page', details: 'Job title on career page', enabled: false, icon: Globe },
     { id: 'resume', name: '2 · Resume Analysis', shortName: 'Resume Analysis', details: '1 Must have · 1 Red flags · 1 Good to have', enabled: true, icon: FileText },
@@ -484,6 +498,7 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
     { id: 'functional', name: '4 · Functional Interview', shortName: 'Functional Interview', details: '5 Questions · ⏱ 12 Minutes · ⚡ 5 Competency', enabled: true, icon: Briefcase },
   ]);
   const [activeStage, setActiveStage] = useState<string>('career');
+  const [editableJob, setEditableJob] = useState(job);
 
   const toggleStage = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -492,7 +507,7 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
 
   const renderRightPanel = () => {
     switch (activeStage) {
-      case 'career': return <CareerPagePanel job={job} />;
+      case 'career': return <CareerPagePanel job={editableJob} setEditableJob={setEditableJob} />;
       case 'resume': return <ResumePanel />;
       case 'screening': return <ScreeningPanel />;
       case 'functional': return <InterviewPanel />;
@@ -523,6 +538,12 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
           </div>
         </div>
         <div className="flex items-center gap-3">
+        <button
+  onClick={() => onSave(editableJob)}
+  className="px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-all"
+>
+  Save Job
+</button>
           <button className="flex items-center gap-2 px-4 py-1.5 border border-primary/20 bg-card text-primary rounded-lg text-xs font-bold hover:bg-muted transition-all">
             Add Collaborator
           </button>
