@@ -508,22 +508,22 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
   };
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-3xl overflow-hidden -m-8 relative z-50">
+    <div className="flex flex-col h-full bg-background rounded-3xl overflow-hidden overflow-x-hidden w-full max-w-full relative z-50">
       {/* Header */}
       <div className="h-16 border-b border-border bg-card px-8 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
+            className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors shrink-0"
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Jobs</span>
-            <ChevronRight size={14} className="text-border" />
-            <span className="font-semibold text-foreground truncate max-w-[200px]">{job.title}</span>
+          <div className="flex items-center gap-2 text-sm min-w-0">
+            <span className="text-muted-foreground shrink-0">Jobs</span>
+            <ChevronRight size={14} className="text-border shrink-0" />
+            <span className="font-semibold text-foreground truncate">{job.title}</span>
             {job.status === 'Published' && (
-              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2">
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2 shrink-0">
                 Published
               </span>
             )}

@@ -90,22 +90,22 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
   }, [viewJob.status]);
 
   return (
-    <div className="flex flex-col h-full bg-slate-50 rounded-3xl overflow-hidden -m-8">
+    <div className="flex flex-col h-full bg-slate-50 rounded-3xl overflow-hidden overflow-x-hidden w-full max-w-full">
       {/* Top Header */}
       <div className="h-16 border-b border-slate-200 bg-white px-8 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <button 
             onClick={onBack}
-            className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"
+            className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors shrink-0"
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-400">Jobs</span>
-            <ChevronRight size={14} className="text-slate-200" />
-            <span className="font-semibold text-slate-900">{viewJob.title}</span>
+          <div className="flex items-center gap-2 text-sm min-w-0">
+            <span className="text-slate-400 shrink-0">Jobs</span>
+            <ChevronRight size={14} className="text-slate-200 shrink-0" />
+            <span className="font-semibold text-slate-900 truncate">{viewJob.title}</span>
             <span className={clsx(
-              'px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2 border',
+              'px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2 border shrink-0',
               statusLabel === 'PUBLISHED'
                 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                 : statusLabel === 'ARCHIVED'
@@ -128,8 +128,8 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
       </div>
 
       {/* Tab Navigation */}
-      <div className="px-8 border-b border-slate-200 bg-white sticky top-0 z-10">
-        <div className="flex items-center gap-8">
+      <div className="px-8 border-b border-slate-200 bg-white overflow-x-auto">
+        <div className="flex items-center gap-8 min-w-max">
           {tabs.map((tab) => (
             <button
               key={tab.id}

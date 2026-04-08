@@ -24,6 +24,8 @@ interface Job {
   createdDate: string;
   status: JobStatus;
   createdBy: string;
+  listedOnCareerPage?: boolean;
+  tags?: string[];
   stats: { total: number; resume: number; screening: number; interview: number };
 }
 
@@ -59,6 +61,8 @@ function mapApiJob(job: ApiJob, pipeline?: JobPipeline): Job {
     }),
     status: mapApiStatus(job.status),
     createdBy: job.created_by || 'System',
+    listedOnCareerPage: true,
+    tags: [],
     stats: mapPipeline(pipeline),
   };
 }
@@ -298,7 +302,13 @@ export default function Dashboard() {
       );
 
       const pipelineByJob = new Map(pipelines.map((item) => [item.id, item.pipeline]));
-      setJobs(jobsResponse.results.map((job) => mapApiJob(job, pipelineByJob.get(job.id))));
+      setJobs(
+        jobsResponse.results.map((job) => ({
+          ...mapApiJob(job, pipelineByJob.get(job.id)),
+          listedOnCareerPage: true,
+          tags: [],
+        }))
+      );
     } catch (error) {
       console.error(error);
       toast('Failed to load jobs from API.', 'error');
@@ -358,6 +368,134 @@ export default function Dashboard() {
     }
   };
 
+  const handleEditJobName = (
+    jobId: string,
+    payload: { title: string; jobId?: string; tags: string[] }
+  ) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              title: payload.title,
+              tags: payload.tags,
+            }
+          : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            title: payload.title,
+            tags: payload.tags,
+          }
+        : prev
+    );
+
+    toast('Job name updated successfully.', 'success');
+  };
+
+  const handleToggleCareerPage = (jobId: string) => {
+    const current = jobs.find((job) => job.id === jobId);
+    const nextListed = !(current?.listedOnCareerPage ?? true);
+
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              listedOnCareerPage: nextListed,
+            }
+          : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            listedOnCareerPage: nextListed,
+          }
+        : prev
+    );
+
+    toast(
+      nextListed ? 'Job listed on career page.' : 'Job unlisted from career page.',
+      'success'
+    );
+  };
+
+  const handleArchiveJob = (jobId: string) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              status: 'Archived',
+            }
+          : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            status: 'Archived',
+          }
+        : prev
+    );
+
+    toast('Job archived successfully.', 'success');
+  };
+
+  const handleUnarchiveJob = (jobId: string) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              status: 'Draft',
+            }
+          : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            status: 'Draft',
+          }
+        : prev
+    );
+
+    toast('Job unarchived successfully.', 'success');
+  };
+
+  const handleDuplicateJob = (jobId: string) => {
+    const source = jobs.find((job) => job.id === jobId);
+    if (!source) return;
+
+    const duplicate: Job = {
+      ...source,
+      id: `${source.id}-copy-${Date.now()}`,
+      title: `${source.title} (Copy)`,
+      createdDate: new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      status: 'Draft',
+      listedOnCareerPage: false,
+    };
+
+    setJobs((prev) => [duplicate, ...prev]);
+    toast('Job duplicated successfully.', 'success');
+  };
+
   const creatorOptions = useMemo(
     () => ['All', ...Array.from(new Set(jobs.map((job) => job.createdBy)))],
     [jobs]
@@ -376,10 +514,7 @@ export default function Dashboard() {
     <>
       <AnimatePresence>
         {isNewJobModalOpen && (
-          <NewJobModal
-            onClose={() => setIsNewJobModalOpen(false)}
-            onCreate={handleAddJob}
-          />
+          <NewJobModal onClose={() => setIsNewJobModalOpen(false)} onCreate={handleAddJob} />
         )}
       </AnimatePresence>
 
@@ -518,7 +653,16 @@ export default function Dashboard() {
                     layout
                     onClick={() => handleJobClick(job)}
                   >
-                    <JobCard job={job} onStatClick={(tab: any) => handleJobClick(job, tab)} />
+                    <JobCard
+                      job={job}
+                      onStatClick={(tab: any) => handleJobClick(job, tab)}
+                      onOpenConfig={() => handleJobClick(job)}
+                      onEditJobName={(payload) => handleEditJobName(job.id, payload)}
+                      onUnlistFromCareerPage={() => handleToggleCareerPage(job.id)}
+                      onArchiveJob={() => handleArchiveJob(job.id)}
+                      onUnarchiveJob={() => handleUnarchiveJob(job.id)}
+                      onDuplicateJob={() => handleDuplicateJob(job.id)}
+                    />
                   </motion.div>
                 ))}
               </motion.div>
