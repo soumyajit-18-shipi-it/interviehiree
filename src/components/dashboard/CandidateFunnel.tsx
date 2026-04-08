@@ -1,8 +1,21 @@
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 
-const funnelData = [
-  { label: 'Total Candidates', count: 1, base: 1, percentage: 100 },
+type FunnelStage = {
+  label: string;
+  count: number;
+  base?: number;
+  percentage: number;
+};
+
+type FunnelSource = {
+  label: string;
+  count: number;
+  color: string;
+};
+
+const fallbackStages: FunnelStage[] = [
+  { label: 'Total Candidates', count: 0, base: 0, percentage: 0 },
   { label: 'Resume Analysis', count: 0, percentage: 0 },
   { label: 'Recruiter Screening', count: 0, percentage: 0 },
   { label: 'Functional Interview', count: 0, percentage: 0 },
@@ -10,20 +23,20 @@ const funnelData = [
   { label: 'Qualified', count: 0, percentage: 0 },
 ];
 
-const sources = [
-  { label: 'Career Page', count: 0, color: 'bg-blue-500' },
-  { label: 'ATS', count: 0, color: 'bg-cyan-400' },
-  { label: 'Bulk Upload', count: 0, color: 'bg-orange-500' },
-  { label: 'Scheduled', count: 1, color: 'bg-pink-500' },
-  { label: 'Direct Link', count: 0, color: 'bg-emerald-500' },
-];
+const fallbackSources: FunnelSource[] = [];
 
-export default function CandidateFunnel() {
+export default function CandidateFunnel({
+  stages = fallbackStages,
+  sources = fallbackSources,
+}: {
+  stages?: FunnelStage[];
+  sources?: FunnelSource[];
+}) {
   return (
     <div className="flex flex-col h-full mt-4">
       {/* Funnel Chart Area */}
       <div className="flex-1 flex flex-col items-center justify-start gap-1 pb-8 w-full">
-        {funnelData.map((stage, index) => {
+        {stages.map((stage, index) => {
           // Narrowing funnel calculation (top wide, bottom narrow)
           const widthPercent = 100 - (index * 14); 
 
@@ -44,7 +57,7 @@ export default function CandidateFunnel() {
                     className={clsx(
                       "h-10 transition-all duration-300 relative overflow-hidden",
                       index === 0 ? "bg-fuchsia-800 rounded-t-lg" : 
-                      index === funnelData.length - 1 ? "bg-fuchsia-400 rounded-b-lg" : 
+                      index === stages.length - 1 ? "bg-fuchsia-400 rounded-b-lg" : 
                       "bg-fuchsia-" + (800 - (index * 100))
                     )}
                     style={{ backgroundColor: `hsl(320, 50%, ${35 + (index * 8)}%)` }}
@@ -69,7 +82,7 @@ export default function CandidateFunnel() {
               </div>
 
               {/* Separator Line */}
-              {index < funnelData.length - 1 && (
+              {index < stages.length - 1 && (
                  <div className="w-1/3 h-[1px] border-b border-dashed border-border my-1" />
               )}
             </div>

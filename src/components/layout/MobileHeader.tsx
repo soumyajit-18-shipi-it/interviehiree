@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function MobileHeader() {
   return (
     <header className="md:hidden fixed top-0 left-0 right-0 bg-sidebar border-b border-sidebar-border z-50 h-16 flex items-center px-4">

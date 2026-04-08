@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft,
   ChevronRight, 
   Info, 
-  Award, 
   Plus, 
   Sparkles,
   CheckCircle,
@@ -18,9 +17,12 @@ import { clsx } from 'clsx';
 import CandidateFunnel from './CandidateFunnel';
 import FunnelInsights from './FunnelInsights';
 import CandidateSidePanel from './CandidateSidePanel';
+import ScoreDistributionChart from './ScoreDistributionChart';
+import { useToast } from '../ui/Toast';
+import { loadJobDetailView, type FunctionalCandidate, type FunnelSource, type FunnelStage, type Insight, type JobLike, type OverviewMetrics, type ResumeCriteria, type ScoreBucket, type ScreeningCandidate } from './jobDetailsData';
 
 interface JobDetailsProps {
-  job: any;
+  job: JobLike;
   onBack: () => void;
   initialTab?: string;
 }
@@ -33,12 +35,59 @@ const tabs = [
 ] as const;
 
 export default function JobDetails({ job, onBack, initialTab = 'Overview' }: JobDetailsProps) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState(
     initialTab.toLowerCase().includes('resume') ? 'resume' : 
     (initialTab.toLowerCase().includes('functional') ? 'functional' :
     (initialTab.toLowerCase().includes('screening') ? 'screening' : 'overview'))
   );
-  const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<ScreeningCandidate | FunctionalCandidate | null>(null);
+  const [detailView, setDetailView] = useState<Awaited<ReturnType<typeof loadJobDetailView>> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const view = await loadJobDetailView(job);
+        if (!cancelled) {
+          setDetailView(view);
+        }
+      } catch (error) {
+        console.error(error);
+        if (!cancelled) {
+          toast('Unable to load job detail data from API.', 'error');
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [job, toast]);
+
+  const viewJob = detailView?.job ?? job;
+  const funnelStages = detailView?.funnelStages ?? [];
+  const funnelSources = detailView?.funnelSources ?? [];
+  const insights = detailView?.insights ?? [];
+  const scoreDistribution = detailView?.scoreDistribution ?? [];
+  const overview = detailView?.overview;
+  const resumeCriteria = detailView?.resumeCriteria;
+  const screeningCandidates = detailView?.screeningCandidates ?? [];
+  const functionalCandidates = detailView?.functionalCandidates ?? [];
+
+  const statusLabel = useMemo(() => {
+    const normalized = (viewJob.status || '').toLowerCase();
+    if (normalized === 'published' || normalized === 'active') {
+      return 'PUBLISHED';
+    }
+    if (normalized === 'archived') {
+      return 'ARCHIVED';
+    }
+    return 'DRAFT';
+  }, [viewJob.status]);
 
   return (
     <div className="flex flex-col h-full bg-slate-50 rounded-3xl overflow-hidden -m-8">
@@ -54,9 +103,16 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
           <div className="flex items-center gap-2 text-sm">
             <span className="text-slate-400">Jobs</span>
             <ChevronRight size={14} className="text-slate-200" />
-            <span className="font-semibold text-slate-900">{job.title}</span>
-            <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2">
-              PUBLISHED
+            <span className="font-semibold text-slate-900">{viewJob.title}</span>
+            <span className={clsx(
+              'px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2 border',
+              statusLabel === 'PUBLISHED'
+                ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                : statusLabel === 'ARCHIVED'
+                  ? 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                  : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+            )}>
+              {statusLabel}
             </span>
           </div>
         </div>
@@ -105,10 +161,19 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
               exit={{ opacity: 0, scale: 0.98 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'overview' && <JobOverviewContent job={job} />}
-              {activeTab === 'resume' && <ResumeAnalysisContent />}
-              {activeTab === 'screening' && <ScreeningContent onCandidateClick={setSelectedCandidate} />}
-              {activeTab === 'functional' && <FunctionalInterviewContent onCandidateClick={setSelectedCandidate} />}
+              {activeTab === 'overview' && (
+                <JobOverviewContent
+                  job={viewJob}
+                  overview={overview}
+                  funnelStages={funnelStages}
+                  funnelSources={funnelSources}
+                  insights={insights}
+                  scoreDistribution={scoreDistribution}
+                />
+              )}
+              {activeTab === 'resume' && <ResumeAnalysisContent job={viewJob} criteria={resumeCriteria} />}
+              {activeTab === 'screening' && <ScreeningContent candidates={screeningCandidates} onCandidateClick={setSelectedCandidate} />}
+              {activeTab === 'functional' && <FunctionalInterviewContent candidates={functionalCandidates} onCandidateClick={setSelectedCandidate} />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -206,7 +271,21 @@ function EditJDModal({ job, onClose }: { job: any; onClose: () => void }) {
   );
 }
 
-function JobOverviewContent({ job }: { job: any }) {
+function JobOverviewContent({
+  job,
+  overview,
+  funnelStages,
+  funnelSources,
+  insights,
+  scoreDistribution,
+}: {
+  job: JobLike;
+  overview?: OverviewMetrics;
+  funnelStages: FunnelStage[];
+  funnelSources: FunnelSource[];
+  insights: Insight[];
+  scoreDistribution: ScoreBucket[];
+}) {
   const [isEditJDOpen, setIsEditJDOpen] = useState(false);
   return (
     <div className="space-y-6">
@@ -227,12 +306,12 @@ function JobOverviewContent({ job }: { job: any }) {
                <span className="px-3 py-1 text-[10px] font-bold text-slate-400">Monthly</span>
             </div>
           </div>
-          <CandidateFunnel />
+          <CandidateFunnel stages={funnelStages} sources={funnelSources} />
         </div>
 
         {/* AI Insights & Stats */}
         <div className="space-y-6">
-          <FunnelInsights />
+          <FunnelInsights insights={insights} />
           <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 overflow-hidden relative group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-transform">
                <Sparkles size={48} className="text-indigo-600" />
@@ -240,18 +319,23 @@ function JobOverviewContent({ job }: { job: any }) {
             <h3 className="text-sm font-bold text-slate-900 mb-4">Hiring Velocity</h3>
             <div className="space-y-4">
               <div className="flex items-end gap-1">
-                <span className="text-3xl font-bold text-slate-900">4.2</span>
+                <span className="text-3xl font-bold text-slate-900">{overview?.velocityDays.toFixed(1) ?? '0.0'}</span>
                 <span className="text-slate-400 text-xs mb-1">days / stage</span>
               </div>
               <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: '65%' }} transition={{ duration: 1, ease: 'easeOut' }} className="h-full bg-primary" />
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.max(20, (overview?.velocityDays ?? 0) * 15))}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  className="h-full bg-primary"
+                />
               </div>
               <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
-                You're <span className="text-success font-bold">12% faster</span> than the industry average for Product Design roles.
+                <span className="text-success font-bold">{overview?.velocityDeltaLabel ?? 'Pipeline metrics are loading.'}</span>
               </p>
             </div>
           </div>
-          <ScoreDistributionChart />
+          <ScoreDistributionChart data={scoreDistribution} />
         </div>
       </div>
 
@@ -269,16 +353,18 @@ function JobOverviewContent({ job }: { job: any }) {
            <div className="space-y-3">
               <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Must Haves</h4>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2"><div className="w-1 h-1 bg-primary rounded-full" /> 5+ years Product Design experience</li>
-                <li className="flex items-center gap-2"><div className="w-1 h-1 bg-primary rounded-full" /> Proficiency in Figma &amp; Framer</li>
-                <li className="flex items-center gap-2"><div className="w-1 h-1 bg-primary rounded-full" /> Experience with Design Systems</li>
+                {(overview?.requirements ?? [
+                  'Job description will populate once the API returns live role details.',
+                ]).map((requirement) => (
+                  <li key={requirement} className="flex items-center gap-2"><div className="w-1 h-1 bg-primary rounded-full" /> {requirement}</li>
+                ))}
               </ul>
            </div>
            <div className="space-y-3">
-              <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Good to Have</h4>
+              <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Job Summary</h4>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2"><div className="w-1 h-1 bg-slate-300 rounded-full" /> React/Frontend knowledge</li>
-                <li className="flex items-center gap-2"><div className="w-1 h-1 bg-slate-300 rounded-full" /> Agency background</li>
+                <li className="flex items-center gap-2"><div className="w-1 h-1 bg-slate-300 rounded-full" /> {overview?.descriptionSummary || job.description || 'Description is loading.'}</li>
+                <li className="flex items-center gap-2"><div className="w-1 h-1 bg-slate-300 rounded-full" /> {job.location || 'Location not set'}</li>
               </ul>
            </div>
         </div>
@@ -287,28 +373,24 @@ function JobOverviewContent({ job }: { job: any }) {
   );
 }
 
-function ResumeAnalysisContent() {
+function ResumeAnalysisContent({ job, criteria }: { job: JobLike; criteria?: ResumeCriteria }) {
   return (
     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 min-h-full">
       <div className="flex items-center gap-3 mb-8">
         <h2 className="text-2xl font-bold text-slate-900">Resume Analysis</h2>
         <Info size={18} className="text-slate-400" />
         <span className="bg-slate-50 text-slate-500 px-3 py-1 rounded-full text-[11px] font-medium border border-slate-100 ml-2">
-          AI screens applications and shortlists the best-fit candidates
+          AI screens applications and shortlists the best-fit candidates for {job.title}
         </span>
       </div>
 
       <div className="space-y-6">
         <CriteriaGroup 
           title="Must Have" 
-          subtitle="Candidates meeting these criteria will be shortlisted; others waitlisted for review"
+          subtitle="Live criteria derived from the current job description"
           icon={CheckCircle}
           color="emerald"
-          items={[
-            "Proficiency in MS Excel, Word, and Google Workspace",
-            "Experience with document analysis and handling (specifically related to tenders)",
-            "Ability to understand and interpret tender documents"
-          ]}
+          items={criteria?.mustHave ?? ['Criteria will appear once the job description loads.']}
         />
         
         <div className="flex justify-center py-2 opacity-50">
@@ -317,12 +399,18 @@ function ResumeAnalysisContent() {
 
         <CriteriaGroup 
           title="Should Not Have (Red Flags)" 
-          subtitle="Candidates with no red flags will be shortlisted; others waitlisted for review"
+          subtitle="Signals that often indicate the candidate is not a fit"
           icon={Star}
           color="rose"
-          items={[
-            "Vague descriptions of responsibilities without concrete examples (e.g., 'Assisted with tenders' without specifics)"
-          ]}
+          items={criteria?.redFlags ?? ['Red flags will appear once the job description loads.']}
+        />
+
+        <CriteriaGroup 
+          title="Good to Have" 
+          subtitle="Signals that improve candidate fit but are not required"
+          icon={Sparkles}
+          color="indigo"
+          items={criteria?.goodToHave ?? ['Optional criteria will appear once the job description loads.']}
         />
       </div>
     </div>
@@ -374,18 +462,18 @@ function CriteriaGroup({ title, subtitle, icon: Icon, color, items }: any) {
 
 import { Mail } from 'lucide-react';
 
-function ScreeningContent({ onCandidateClick }: any) {
-  const allCandidates = [
-    { id: 1, name: 'Kathryn Murphy', email: 'kathryn@example.com', status: 'Completed', screening: [{ label: 'Experience', value: '4y' }, { label: 'Location', value: 'Yes' }], insight: 'Relocation required', score: 85 },
-    { id: 2, name: 'Leslie Alexander', email: 'leslie@example.com', status: 'In Progress', screening: [{ label: 'Experience', value: '2y' }, { label: 'Location', value: 'No' }], insight: 'Local candidate', score: 60 },
-    { id: 3, name: 'Robert Fox', email: 'robert@example.com', status: 'Completed', screening: [{ label: 'Experience', value: '6y' }, { label: 'Location', value: 'Yes' }], insight: 'Top performer', score: 94 },
-  ];
-
+function ScreeningContent({
+  candidates,
+  onCandidateClick,
+}: {
+  candidates: ScreeningCandidate[];
+  onCandidateClick?: (candidate: ScreeningCandidate) => void;
+}) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [scoreFilter, setScoreFilter] = useState('All');
 
-  const filtered = allCandidates.filter(c => {
+  const filtered = candidates.filter(c => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'All' || c.status === statusFilter;
     const matchScore = scoreFilter === 'All' || (scoreFilter === '> 80' ? c.score > 80 : c.score > 60);
@@ -487,18 +575,18 @@ function ScreeningContent({ onCandidateClick }: any) {
 }
 
 
-function FunctionalInterviewContent({ onCandidateClick }: any) {
-  const allCandidates = [
-    { id: 3, name: 'Bessie Cooper', email: 'bessie@example.com', status: 'Completed', techScore: 92, domainExpertise: 'Advanced', notes: 'Strong system design skills' },
-    { id: 4, name: 'Dianne Russell', email: 'dianne@example.com', status: 'Scheduled', techScore: null, domainExpertise: 'Pending', notes: 'Interview tomorrow at 10 AM' },
-    { id: 5, name: 'Marcus Johnson', email: 'marcus@example.com', status: 'Completed', techScore: 78, domainExpertise: 'Intermediate', notes: 'Good communication, needs more depth' },
-  ];
-
+function FunctionalInterviewContent({
+  candidates,
+  onCandidateClick,
+}: {
+  candidates: FunctionalCandidate[];
+  onCandidateClick?: (candidate: FunctionalCandidate) => void;
+}) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [expertiseFilter, setExpertiseFilter] = useState('All');
 
-  const filtered = allCandidates.filter(c => {
+  const filtered = candidates.filter(c => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) || c.email.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'All' || c.status === statusFilter;
     const matchExpertise = expertiseFilter === 'All' || c.domainExpertise === expertiseFilter;
@@ -601,30 +689,3 @@ function FunctionalInterviewContent({ onCandidateClick }: any) {
   );
 }
 
-
-
-export function ScoreDistributionChart() {
-  const bars = [5, 12, 25, 45, 80, 60, 35, 15, 8, 2];
-  return (
-    <div className="bg-card border border-border shadow-sm rounded-3xl p-6 relative group overflow-hidden">
-      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 group-hover:-rotate-12 transition-transform">
-        <Award size={48} className="text-primary" />
-      </div>
-      <h3 className="font-bold text-sm text-foreground mb-4">Score Distribution</h3>
-      <div className="flex items-end gap-1 h-32 w-full mt-4">
-        {bars.map((height, i) => (
-          <div 
-            key={i} 
-            className="flex-1 bg-primary/20 hover:bg-primary transition-colors rounded-t" 
-            style={{ height: `${height}%` }} 
-          />
-        ))}
-      </div>
-      <div className="flex justify-between text-[10px] text-muted-foreground mt-2 font-bold uppercase tracking-wider">
-        <span>0</span>
-        <span>Avg: 65</span>
-        <span>100</span>
-      </div>
-    </div>
-  );
-}

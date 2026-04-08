@@ -1,17 +1,78 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Clock, ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react';
 import ApplicationForm from './ApplicationForm';
+import {
+  ensureOrganizationId,
+  getCareerPageJobs,
+  getCareerPageSetup,
+  listJobs,
+} from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
-const JOBS = [
-  { id: '1', title: 'Senior Product Designer', department: 'Design', location: 'Remote', type: 'Full-time', description: 'We are looking for a visionary Senior Product Designer to lead our design efforts and create world-class recruiter experiences.' },
-  { id: '2', title: 'Full Stack Engineer', department: 'Engineering', location: 'New York, NY', type: 'Full-time', description: 'Join our core engineering team to build scalable AI-driven recruitment tools using React, Node.js, and Python.' },
-  { id: '3', title: 'Marketing Manager', department: 'Growth', location: 'Remote', type: 'Contract', description: 'Help us grow our brand presence and reach recruiters worldwide through innovative digital marketing strategies.' }
-];
+type PortalJob = {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  type: string;
+  description: string;
+};
+
+const fallbackJobs: PortalJob[] = [];
 
 export default function CandidatePortal() {
-  const [selectedJob, setSelectedJob] = useState<typeof JOBS[0] | null>(null);
+  const { toast } = useToast();
+  const [jobs, setJobs] = useState<PortalJob[]>(fallbackJobs);
+  const [organizationId, setOrganizationId] = useState('');
+  const [selectedJob, setSelectedJob] = useState<PortalJob | null>(null);
   const [isApplied, setIsApplied] = useState(false);
+
+  useEffect(() => {
+    const loadJobs = async () => {
+      try {
+        const orgId = await ensureOrganizationId();
+        setOrganizationId(orgId);
+
+        let apiJobs = [] as PortalJob[];
+        try {
+          const setup = await getCareerPageSetup(orgId);
+          if (setup?.slug) {
+            const careerJobs = await getCareerPageJobs({ slug: setup.slug, page_size: 50 });
+            apiJobs = careerJobs.results.map((job) => ({
+              id: job.id,
+              title: job.title,
+              department: job.role,
+              location: job.location,
+              type: 'Full-time',
+              description: job.description,
+            }));
+          }
+        } catch {
+          // Fallback to regular jobs endpoint when career setup is not created.
+        }
+
+        if (!apiJobs.length) {
+          const jobsResponse = await listJobs({ organization: orgId, status: 'published', page_size: 50 });
+          apiJobs = jobsResponse.results.map((job) => ({
+            id: job.id,
+            title: job.title,
+            department: job.role,
+            location: job.location,
+            type: 'Full-time',
+            description: job.description,
+          }));
+        }
+
+        setJobs(apiJobs);
+      } catch (error) {
+        console.error(error);
+        toast('Unable to load open positions right now.', 'error');
+      }
+    };
+
+    loadJobs();
+  }, [toast]);
 
   if (isApplied) {
     return (
@@ -78,7 +139,7 @@ export default function CandidatePortal() {
               exit={{ opacity: 0, y: -20 }}
               className="grid gap-6"
             >
-              {JOBS.map((job, idx) => (
+              {jobs.map((job, idx) => (
                 <motion.div
                   key={job.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -144,6 +205,8 @@ export default function CandidatePortal() {
 
                   <ApplicationForm 
                     jobTitle={selectedJob.title} 
+                    jobId={selectedJob.id}
+                    organizationId={organizationId}
                     onSuccess={() => setIsApplied(true)} 
                   />
                 </div>

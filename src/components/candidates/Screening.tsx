@@ -1,21 +1,62 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Calendar, Award, ExternalLink, MoreVertical, Video } from 'lucide-react';
 import { clsx } from 'clsx';
+import { ensureOrganizationId, listApplications } from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
-const mockCandidates = [
-  { id: '1', name: 'Alex Rivera', email: 'alex@example.com', status: 'Screening', score: 88, source: 'LinkedIn', schedule: 'Mar 20, 10:00 AM' },
-  { id: '2', name: 'Sarah Chen', email: 'sarah@example.com', status: 'Interview', score: 92, source: 'Referral', schedule: 'Mar 21, 2:00 PM' },
-  { id: '3', name: 'Michael Bay', email: 'michael@example.com', status: 'Screening', score: 75, source: 'Indeed', schedule: 'Reschedule' },
-  { id: '4', name: 'Emma Wilson', email: 'emma@example.com', status: 'Offer', score: 95, source: 'LinkedIn', schedule: 'Completed' },
-];
+type ScreeningCandidate = {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  score: number;
+  source: string;
+  schedule: string;
+};
 
 export default function Screening() {
+  const { toast } = useToast();
+  const [candidates, setCandidates] = useState<ScreeningCandidate[]>([]);
   const [search, setSearch] = useState('');
   const [scoreRange, setScoreRange] = useState(70);
   const [statusFilter, setStatusFilter] = useState('All');
 
-  const filteredCandidates = mockCandidates.filter(c => {
+  useEffect(() => {
+    const loadCandidates = async () => {
+      try {
+        const organization = await ensureOrganizationId();
+        const applications = await listApplications({ organization, page_size: 100 });
+        const mapped = applications.results.map((application) => {
+          const interview = application.interviews?.[0];
+          return {
+            id: application.id,
+            name: application.candidate_name ?? 'Unknown Candidate',
+            email: 'Candidate email unavailable',
+            status: application.current_stage,
+            score: application.resume_analysis?.score ?? 0,
+            source: application.source,
+            schedule: interview?.scheduled_for
+              ? new Date(interview.scheduled_for).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })
+              : 'Not Scheduled',
+          };
+        });
+        setCandidates(mapped);
+      } catch (error) {
+        console.error(error);
+        toast('Unable to load screening candidates.', 'error');
+      }
+    };
+
+    loadCandidates();
+  }, [toast]);
+
+  const filteredCandidates = candidates.filter(c => {
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
     const matchesScore = c.score >= scoreRange;
     const matchesStatus = statusFilter === 'All' || c.status === statusFilter;

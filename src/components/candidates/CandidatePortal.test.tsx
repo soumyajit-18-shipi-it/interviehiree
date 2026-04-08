@@ -1,0 +1,38 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import { ToastProvider } from '../ui/Toast';
+import CandidatePortal from './CandidatePortal';
+
+vi.mock('../../lib/api', () => ({
+  ensureOrganizationId: vi.fn().mockResolvedValue('org-1'),
+  getCareerPageSetup: vi.fn().mockResolvedValue({ slug: 'careers' }),
+  getCareerPageJobs: vi.fn().mockResolvedValue({
+    count: 1,
+    next: null,
+    previous: null,
+    results: [
+      {
+        id: 'job-1',
+        title: 'Backend Engineer',
+        role: 'Engineering',
+        location: 'Remote',
+        description: 'Build APIs',
+      },
+    ],
+  }),
+  listJobs: vi.fn().mockResolvedValue({ count: 0, next: null, previous: null, results: [] }),
+}));
+
+describe('CandidatePortal', () => {
+  it('loads jobs from career page APIs', async () => {
+    render(
+      <ToastProvider>
+        <CandidatePortal />
+      </ToastProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
+      expect(screen.getByText('Build APIs')).toBeInTheDocument();
+    });
+  });
+});

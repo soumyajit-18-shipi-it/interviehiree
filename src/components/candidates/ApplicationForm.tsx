@@ -1,13 +1,18 @@
 import { useState } from 'react';
 import { Upload, X, CheckCircle2, User, Mail, Phone, FileText } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { createApplication, createCandidate } from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
 interface ApplicationFormProps {
   jobTitle: string;
+  jobId: string;
+  organizationId: string;
   onSuccess: () => void;
 }
 
-export default function ApplicationForm({ jobTitle, onSuccess }: ApplicationFormProps) {
+export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuccess }: ApplicationFormProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -47,14 +52,38 @@ export default function ApplicationForm({ jobTitle, onSuccess }: ApplicationForm
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.resume) {
-      alert("Please upload your resume.");
+      toast('Please upload your resume.', 'warning');
       return;
     }
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    onSuccess();
+    try {
+      const candidate = await createCandidate({
+        organization: organizationId,
+        full_name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        source: 'Career Page',
+        current_title: `Applicant for ${jobTitle}`,
+        resume: formData.resume,
+      });
+
+      await createApplication({
+        organization: organizationId,
+        candidate: candidate.id,
+        job: jobId,
+        source: 'Career Page',
+        current_stage: 'resume_analysis',
+        notes: `Submitted from public career page for ${jobTitle}`,
+      });
+
+      toast('Application submitted successfully.', 'success');
+      onSuccess();
+    } catch (error) {
+      console.error(error);
+      toast('Failed to submit application. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

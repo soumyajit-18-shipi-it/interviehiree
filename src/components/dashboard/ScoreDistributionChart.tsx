@@ -1,15 +1,15 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { motion } from 'framer-motion';
 
-const defaultData = [
-  { range: '0–20', percentage: 15, candidates: 21 },
-  { range: '20–40', percentage: 25, candidates: 35 },
-  { range: '40–60', percentage: 40, candidates: 56 },
-  { range: '60–80', percentage: 12, candidates: 17 },
-  { range: '80–100', percentage: 8, candidates: 11 },
-];
+export type ScoreBucket = {
+  range: string;
+  percentage: number;
+  candidates: number;
+};
 
-export default function ScoreDistributionChart({ data = defaultData }: { data?: typeof defaultData }) {
+const defaultData: ScoreBucket[] = [];
+
+export default function ScoreDistributionChart({ data = defaultData }: { data?: ScoreBucket[] }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}

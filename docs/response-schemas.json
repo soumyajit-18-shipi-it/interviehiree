@@ -1,0 +1,553 @@
+{
+  "generatedAt": "2026-04-08T11:29:20.680Z",
+  "source": "src/lib/api.ts",
+  "schemas": {
+    "Organization": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "name": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "contact_email": {
+          "type": "string"
+        },
+        "website_url": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "logo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "domain",
+        "contact_email",
+        "website_url",
+        "location",
+        "description",
+        "logo",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "TeamMember": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "user": {
+          "$ref": "#/definitions/UUID"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "first_name": {
+          "type": "string"
+        },
+        "last_name": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "organization": {
+          "$ref": "#/definitions/UUID"
+        },
+        "designation": {
+          "type": "string"
+        },
+        "user_type": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "registered_on": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "organization",
+        "designation",
+        "user_type",
+        "status"
+      ],
+      "additionalProperties": false
+    },
+    "Preferences": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "organization": {
+          "$ref": "#/definitions/UUID"
+        },
+        "cookie_settings": {
+          "type": "object",
+          "properties": {
+            "analytics": {
+              "type": "boolean"
+            },
+            "marketing": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "analytics",
+            "marketing"
+          ],
+          "additionalProperties": false
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "organization",
+        "cookie_settings",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "Job": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "organization": {
+          "$ref": "#/definitions/UUID"
+        },
+        "title": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "business_unit": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "created_by": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "total_candidates": {
+          "type": "number"
+        },
+        "resume_analysis": {
+          "type": "number"
+        },
+        "recruiter_screening": {
+          "type": "number"
+        },
+        "functional_interview": {
+          "type": "number"
+        },
+        "completed": {
+          "type": "number"
+        },
+        "qualified": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "organization",
+        "title",
+        "role",
+        "business_unit",
+        "description",
+        "location",
+        "status",
+        "created_by",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "JobOverview": {
+      "type": "object",
+      "properties": {
+        "total_jobs": {
+          "type": "number"
+        },
+        "published_jobs": {
+          "type": "number"
+        },
+        "draft_jobs": {
+          "type": "number"
+        },
+        "archived_jobs": {
+          "type": "number"
+        },
+        "jobs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Job"
+          }
+        }
+      },
+      "required": [
+        "total_jobs",
+        "published_jobs",
+        "draft_jobs",
+        "archived_jobs",
+        "jobs"
+      ],
+      "additionalProperties": false
+    },
+    "JobPipeline": {
+      "type": "object",
+      "properties": {
+        "total": {
+          "type": "number"
+        },
+        "resume_analysis": {
+          "type": "number"
+        },
+        "recruiter_screening": {
+          "type": "number"
+        },
+        "functional_interview": {
+          "type": "number"
+        },
+        "completed": {
+          "type": "number"
+        },
+        "qualified": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "total",
+        "resume_analysis",
+        "recruiter_screening",
+        "functional_interview",
+        "completed",
+        "qualified"
+      ],
+      "additionalProperties": false
+    },
+    "Candidate": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "organization": {
+          "$ref": "#/definitions/UUID"
+        },
+        "full_name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "current_title": {
+          "type": "string"
+        },
+        "resume": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "organization",
+        "full_name",
+        "email",
+        "phone",
+        "source",
+        "current_title",
+        "resume",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "ResumeAnalysis": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "application": {
+          "$ref": "#/definitions/UUID"
+        },
+        "score": {
+          "type": "number"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "shortlisted": {
+          "type": "boolean"
+        },
+        "waitlisted": {
+          "type": "boolean"
+        },
+        "analysed_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "application",
+        "score",
+        "summary",
+        "shortlisted",
+        "waitlisted"
+      ],
+      "additionalProperties": false
+    },
+    "Interview": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "application": {
+          "$ref": "#/definitions/UUID"
+        },
+        "interview_type": {
+          "type": "string"
+        },
+        "scheduled_for": {
+          "type": "string"
+        },
+        "score": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "status": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "application",
+        "interview_type",
+        "scheduled_for",
+        "score",
+        "status",
+        "link",
+        "notes",
+        "created_at"
+      ],
+      "additionalProperties": false
+    },
+    "Application": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "organization": {
+          "$ref": "#/definitions/UUID"
+        },
+        "candidate": {
+          "$ref": "#/definitions/UUID"
+        },
+        "candidate_name": {
+          "type": "string"
+        },
+        "job": {
+          "$ref": "#/definitions/UUID"
+        },
+        "job_title": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "current_stage": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "applied_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        },
+        "resume_analysis": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/ResumeAnalysis"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "interviews": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Interview"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "organization",
+        "candidate",
+        "job",
+        "source",
+        "current_stage",
+        "notes",
+        "applied_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "CareerPageSetup": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "organization": {
+          "$ref": "#/definitions/UUID"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "subheadline": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "is_live": {
+          "type": "boolean"
+        },
+        "brand_color": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "updated_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "organization",
+        "headline",
+        "subheadline",
+        "slug",
+        "is_live",
+        "brand_color",
+        "created_at",
+        "updated_at"
+      ],
+      "additionalProperties": false
+    },
+    "CareerPageDetails": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/UUID"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "headline": {
+          "type": "string"
+        },
+        "subheadline": {
+          "type": "string"
+        },
+        "organization": {
+          "$ref": "#/definitions/UUID"
+        },
+        "is_live": {
+          "type": "boolean"
+        },
+        "brand_color": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "slug"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

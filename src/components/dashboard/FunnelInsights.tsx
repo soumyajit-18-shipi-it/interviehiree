@@ -1,13 +1,19 @@
 import { motion } from 'framer-motion';
 import { Lightbulb, ArrowRight, Sparkles } from 'lucide-react';
 
-const defaultInsights = [
+export type FunnelInsight = {
+  id: string;
+  text: string;
+  type: 'warning' | 'recommendation' | 'success';
+};
+
+const defaultInsights: FunnelInsight[] = [
   { id: '1', text: 'Low resume analysis rate detected. Consider refining key skill matching.', type: 'warning' },
   { id: '2', text: 'Increase sourcing from LinkedIn for better Functional interview pass rates.', type: 'recommendation' },
   { id: '3', text: 'Recruiter screening efficiency increased by 15% this week.', type: 'success' },
 ];
 
-export default function FunnelInsights({ insights = defaultInsights, onAction }: { insights?: typeof defaultInsights, onAction?: (tab: any) => void }) {
+export default function FunnelInsights({ insights = defaultInsights, onAction }: { insights?: FunnelInsight[]; onAction?: (tab: any) => void }) {
   return (
     <motion.div 
       initial={{ opacity: 0, x: 20 }}

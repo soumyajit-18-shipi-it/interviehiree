@@ -21,6 +21,13 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { clsx } from "clsx";
+import {
+  ensureOrganizationId,
+  getCandidateUsageOverview,
+  listApplications,
+  listJobs,
+} from "../../lib/api";
+import { useToast } from "../ui/Toast";
 
 type CandidateSource =
   | "Career Page"
@@ -295,13 +302,73 @@ function buildTableRows(filteredJobs: JobRecord[]) {
   });
 }
 
+function stageFromApplication(currentStage: string) {
+  const stage = currentStage.toLowerCase();
+  return {
+    resumeAnalysed: stage.includes("resume"),
+    resumeShortlisted: stage.includes("shortlist"),
+    resumeWaitlisted: stage.includes("waitlist"),
+    recruiterAttempted: stage.includes("screen"),
+    recruiterScheduled: stage.includes("screen") || stage.includes("interview"),
+    recruiterShortlisted: stage.includes("screening_shortlisted"),
+    recruiterWaitlisted: stage.includes("screening_waitlisted"),
+    functionalAttempted: stage.includes("functional") || stage.includes("interview"),
+    functionalScheduled: stage.includes("functional") || stage.includes("interview"),
+    functionalShortlisted: stage.includes("selected") || stage.includes("qualified"),
+    functionalWaitlisted: stage.includes("functional_waitlisted"),
+  };
+}
+
 export default function Analytics() {
-  const [jobs] = useState<JobRecord[]>(jobsSeed);
+  const { toast } = useToast();
+  const [jobs, setJobs] = useState<JobRecord[]>(jobsSeed);
   const [selectedJob, setSelectedJob] = useState("all");
   const [selectedRange, setSelectedRange] = useState("30");
   const [search, setSearch] = useState("");
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      try {
+        const organization = await ensureOrganizationId();
+        await getCandidateUsageOverview(organization).catch(() => null);
+
+        const [jobsResponse, applicationsResponse] = await Promise.all([
+          listJobs({ organization, page_size: 100 }),
+          listApplications({ organization, page_size: 200 }),
+        ]);
+
+        const applicantsByJob = new Map<string, Applicant[]>();
+        applicationsResponse.results.forEach((application) => {
+          const applicants = applicantsByJob.get(application.job) ?? [];
+          applicants.push({
+            id: application.id,
+            source: (application.source as CandidateSource) || "Direct Link",
+            createdAt: application.applied_at,
+            stage: stageFromApplication(application.current_stage),
+          });
+          applicantsByJob.set(application.job, applicants);
+        });
+
+        const mappedJobs: JobRecord[] = jobsResponse.results.map((job) => ({
+          id: job.id,
+          jobName: job.title,
+          createdBy: job.created_by || "System",
+          businessUnit: job.business_unit || "-",
+          status: job.status.toLowerCase() === "archived" ? "Archived" : job.status.toLowerCase() === "draft" ? "Draft" : "Active",
+          applicants: applicantsByJob.get(job.id) ?? [],
+        }));
+
+        setJobs(mappedJobs);
+      } catch (error) {
+        console.error(error);
+        toast("Unable to load usage analytics from API.", "error");
+      }
+    };
+
+    loadAnalytics();
+  }, [toast]);
 
   const filteredJobs = useMemo(() => {
     return jobs

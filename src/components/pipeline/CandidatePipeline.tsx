@@ -1,16 +1,62 @@
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, TrendingUp } from 'lucide-react';
 import { clsx } from 'clsx';
+import { ensureOrganizationId, listApplications } from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
-const funnelStages = [
-  { id: 'total', label: 'Total Applicants', count: 1245, color: 'bg-zinc-500/20' },
-  { id: 'resume', label: 'Resume Screened', count: 845, color: 'bg-blue-500/20' },
-  { id: 'screening', label: 'Recruiter Screen', count: 312, color: 'bg-amber-500/20' },
-  { id: 'interview', label: 'Functional Interview', count: 145, color: 'bg-violet-500/20' },
-  { id: 'selected', label: 'Offer Extended', count: 28, color: 'bg-emerald-500/20' },
-];
+type PipelineCounts = {
+  total: number;
+  resume: number;
+  screening: number;
+  interview: number;
+  selected: number;
+};
 
 export default function CandidatePipeline() {
+  const { toast } = useToast();
+  const [counts, setCounts] = useState<PipelineCounts>({
+    total: 0,
+    resume: 0,
+    screening: 0,
+    interview: 0,
+    selected: 0,
+  });
+
+  useEffect(() => {
+    const loadPipeline = async () => {
+      try {
+        const organization = await ensureOrganizationId();
+        const applications = await listApplications({ organization, page_size: 200 });
+        const total = applications.results.length;
+        const resume = applications.results.filter((a) => a.current_stage.toLowerCase().includes('resume')).length;
+        const screening = applications.results.filter((a) => a.current_stage.toLowerCase().includes('screen')).length;
+        const interview = applications.results.filter((a) => a.current_stage.toLowerCase().includes('interview') || a.current_stage.toLowerCase().includes('functional')).length;
+        const selected = applications.results.filter((a) => {
+          const stage = a.current_stage.toLowerCase();
+          return stage.includes('offer') || stage.includes('selected') || stage.includes('qualified');
+        }).length;
+        setCounts({ total, resume, screening, interview, selected });
+      } catch (error) {
+        console.error(error);
+        toast('Unable to load candidate pipeline.', 'error');
+      }
+    };
+
+    loadPipeline();
+  }, [toast]);
+
+  const funnelStages = useMemo(
+    () => [
+      { id: 'total', label: 'Total Applicants', count: counts.total, color: 'bg-zinc-500/20' },
+      { id: 'resume', label: 'Resume Screened', count: counts.resume, color: 'bg-blue-500/20' },
+      { id: 'screening', label: 'Recruiter Screen', count: counts.screening, color: 'bg-amber-500/20' },
+      { id: 'interview', label: 'Functional Interview', count: counts.interview, color: 'bg-violet-500/20' },
+      { id: 'selected', label: 'Offer Extended', count: counts.selected, color: 'bg-emerald-500/20' },
+    ],
+    [counts],
+  );
+
   return (
     <div className="space-y-8">
       {/* Header */}

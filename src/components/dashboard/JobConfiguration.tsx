@@ -424,6 +424,10 @@ function InterviewPanel() {
 
 // ─── Career Page Panel (existing, now extracted) ──────────────────────────
 function CareerPagePanel({ job }: { job: any }) {
+  const jobSlug = job.title
+    ? job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    : 'job';
+
   return (
     <div className="flex flex-col min-h-full">
       <div className="flex items-center gap-2 mb-6">
@@ -447,24 +451,27 @@ function CareerPagePanel({ job }: { job: any }) {
 
         <div className="prose prose-sm max-w-none text-muted-foreground flex-1">
           <h1 className="text-2xl font-black text-foreground mb-1">{job.title}</h1>
-          <p className="text-sm font-semibold text-foreground mb-3">Alpha • 📍 Delhi, India</p>
+          <p className="text-sm font-semibold text-foreground mb-3">Alpha • 📍 {job.location || 'Location not set'}</p>
           <div className="flex gap-2 mb-6">
-            <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">Full Time</span>
-            <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">Fresher</span>
+            <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">{job.business_unit || 'Full Time'}</span>
+            <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">{job.status || 'Active'}</span>
           </div>
           <h4 className="font-bold text-foreground">Job Overview</h4>
-          <p className="mb-4">We are seeking a talented individual to join our growing team. You will be responsible for end-to-end delivery of the assigned role.</p>
+          <p className="mb-4">{job.description || 'We are seeking a talented individual to join our growing team. You will be responsible for end-to-end delivery of the assigned role.'}</p>
           <h4 className="font-bold text-foreground">Key Responsibilities</h4>
           <ul>
-            <li>Collaborate with cross-functional teams</li>
-            <li>Deliver high-quality output on spec</li>
-            <li>Maintain platform stability and performance</li>
+            {(job.description
+              ? job.description.split(/[.\n•-]+/).map((item: string) => item.trim()).filter(Boolean).slice(0, 3)
+              : ['Collaborate with cross-functional teams', 'Deliver high-quality output on spec', 'Maintain platform stability and performance']
+            ).map((item: string) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </div>
 
         <div className="mt-8 flex items-center justify-between border-t border-border pt-4">
           <div className="text-xs text-muted-foreground">
-            Live URL: <a href="https://alpha.interviehire.ai/jobs" className="text-primary hover:underline">alpha.interviehire.ai/jobs</a>
+            Live URL: <a href={`https://alpha.interviehire.ai/jobs/${jobSlug}`} className="text-primary hover:underline">alpha.interviehire.ai/jobs/{jobSlug}</a>
           </div>
           <button className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
             Enable

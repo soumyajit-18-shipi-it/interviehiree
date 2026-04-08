@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Users, Briefcase, X, FileText, MapPin, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
 import JobCard from './JobCard';
 import JobDetails from './JobDetails';
 import JobConfiguration from './JobConfiguration';
+import {
+  createJob,
+  ensureOrganizationId,
+  getJobPipeline,
+  listJobs,
+  type Job as ApiJob,
+  type JobPipeline,
+} from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
 type JobStatus = 'Published' | 'Draft' | 'Archived';
 
@@ -18,39 +27,80 @@ interface Job {
   stats: { total: number; resume: number; screening: number; interview: number };
 }
 
-const initialJobs: Job[] = [
-  { id: '1', title: 'Senior Product Designer', role: 'Design • Remote', createdDate: 'Mar 18, 2026', createdBy: 'Alice', status: 'Published', stats: { total: 142, resume: 85, screening: 32, interview: 12 } },
-  { id: '2', title: 'Full Stack Engineer', role: 'Engineering • NY', createdDate: 'Mar 15, 2026', createdBy: 'Bob', status: 'Published', stats: { total: 204, resume: 120, screening: 45, interview: 15 } },
-  { id: '3', title: 'Marketing Manager', role: 'Growth • Remote', createdDate: 'Mar 12, 2026', createdBy: 'Alice', status: 'Draft', stats: { total: 0, resume: 0, screening: 0, interview: 0 } },
-  { id: '4', title: 'Security Engineer', role: 'Engineering • Remote', createdDate: 'Feb 28, 2026', createdBy: 'Charlie', status: 'Archived', stats: { total: 89, resume: 45, screening: 12, interview: 4 } },
-];
+function mapApiStatus(status: string): JobStatus {
+  const normalized = status.toLowerCase();
+  if (normalized === 'published' || normalized === 'active') {
+    return 'Published';
+  }
+  if (normalized === 'archived') {
+    return 'Archived';
+  }
+  return 'Draft';
+}
 
-function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job) => void }) {
+function mapPipeline(pipeline?: JobPipeline): Job['stats'] {
+  return {
+    total: pipeline?.total ?? 0,
+    resume: pipeline?.resume_analysis ?? 0,
+    screening: pipeline?.recruiter_screening ?? 0,
+    interview: pipeline?.functional_interview ?? 0,
+  };
+}
+
+function mapApiJob(job: ApiJob, pipeline?: JobPipeline): Job {
+  return {
+    id: job.id,
+    title: job.title,
+    role: `${job.role} • ${job.location}`,
+    createdDate: new Date(job.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+    status: mapApiStatus(job.status),
+    createdBy: job.created_by || 'System',
+    stats: mapPipeline(pipeline),
+  };
+}
+
+function NewJobModal({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (payload: {
+    title: string;
+    department: string;
+    location: string;
+    status: JobStatus;
+  }) => Promise<void>;
+}) {
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('Engineering');
   const [location, setLocation] = useState('Remote');
   const [type, setType] = useState('Full-time');
   const [status, setStatus] = useState<JobStatus>('Draft');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const departments = ['Engineering', 'Design', 'Growth', 'Marketing', 'Sales', 'HR', 'Finance'];
   const locations = ['Remote', 'NYC', 'San Francisco', 'Delhi', 'London', 'Berlin'];
   const types = ['Full-time', 'Part-time', 'Contract', 'Internship'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    onAdd({
-      id: String(Date.now()),
-      title: title.trim(),
-      role: `${department} • ${location}`,
-      createdDate: dateStr,
-      createdBy: 'Me',
-      status,
-      stats: { total: 0, resume: 0, screening: 0, interview: 0 },
-    });
-    onClose();
+    if (!title.trim() || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onCreate({
+        title: title.trim(),
+        department,
+        location,
+        status,
+      });
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -188,9 +238,10 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
               const form = (e.currentTarget.closest('.flex.flex-col') as HTMLElement)?.querySelector('form');
               form?.requestSubmit();
             }}
+            disabled={isSubmitting}
             className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all"
           >
-            Create Job
+            {isSubmitting ? 'Creating...' : 'Create Job'}
           </button>
         </div>
       </motion.div>
@@ -201,17 +252,45 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
 type FilterStatus = JobStatus | 'All';
 
 export default function Dashboard() {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const { toast } = useToast();
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [organizationId, setOrganizationId] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('All');
   const [createdByFilter, setCreatedByFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<'config' | 'responses' | null>(null);
-  const [initialTab, setInitialTab] = useState<'Overview' | 'Resume Analysis' | 'Recruiter Screening'>('Overview');
+  const [initialTab, setInitialTab] = useState<'Overview' | 'Resume Analysis' | 'Recruiter Screening' | 'Functional Interview'>('Overview');
   const [isLoading, setIsLoading] = useState(false);
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
 
-  const handleJobClick = (job: Job, tab?: any) => {
+  const loadJobs = async () => {
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+      const jobsResponse = await listJobs({ organization: orgId, page_size: 100 });
+
+      const pipelines = await Promise.all(
+        jobsResponse.results.map((job) =>
+          getJobPipeline(job.id)
+            .then((pipeline) => ({ id: job.id, pipeline }))
+            .catch(() => ({ id: job.id, pipeline: undefined }))
+        )
+      );
+      const pipelineByJob = new Map(pipelines.map((item) => [item.id, item.pipeline]));
+      setJobs(jobsResponse.results.map((job) => mapApiJob(job, pipelineByJob.get(job.id))));
+    } catch (error) {
+      console.error(error);
+      toast('Failed to load jobs from API.', 'error');
+    }
+  };
+
+  useEffect(() => {
+    loadJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleJobClick = (job: Job, tab?: 'Overview' | 'Resume Analysis' | 'Recruiter Screening' | 'Functional Interview') => {
     setIsLoading(true);
     setSelectedJob(job);
     if (tab) {
@@ -225,11 +304,37 @@ export default function Dashboard() {
     }, 800);
   };
 
-  const handleAddJob = (job: Job) => {
-    setJobs(prev => [job, ...prev]);
+  const handleAddJob = async (payload: {
+    title: string;
+    department: string;
+    location: string;
+    status: JobStatus;
+  }) => {
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+      await createJob({
+        organization: orgId,
+        title: payload.title,
+        role: payload.department,
+        business_unit: payload.department,
+        description: `${payload.title} role created from dashboard`,
+        location: payload.location,
+        status: payload.status.toLowerCase(),
+      });
+      toast('Job created successfully.', 'success');
+      await loadJobs();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to create job. Please try again.', 'error');
+      throw error;
+    }
   };
 
-  const creatorOptions = ['All', ...Array.from(new Set(jobs.map(job => job.createdBy)))];
+  const creatorOptions = useMemo(
+    () => ['All', ...Array.from(new Set(jobs.map((job) => job.createdBy)))],
+    [jobs],
+  );
 
   const filteredJobs = jobs.filter(job => {
     const matchesStatus = activeFilter === 'All' || job.status === activeFilter;
@@ -246,7 +351,7 @@ export default function Dashboard() {
         {isNewJobModalOpen && (
           <NewJobModal
             onClose={() => setIsNewJobModalOpen(false)}
-            onAdd={handleAddJob}
+            onCreate={handleAddJob}
           />
         )}
       </AnimatePresence>
