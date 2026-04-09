@@ -61,6 +61,7 @@ export interface Job {
   created_by: string;
   created_at: string;
   updated_at: string;
+  listed_on_career_page?: boolean;
   total_candidates?: number;
   resume_analysis?: number;
   recruiter_screening?: number;
@@ -145,6 +146,7 @@ export interface CareerPageSetup {
   slug: string;
   is_live: boolean;
   brand_color: string;
+  live_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -386,6 +388,14 @@ export function updateJob(id: string, data: Partial<Pick<Job, 'status' | 'locati
   });
 }
 
+export function updateJobCareerPageListing(id: string, listedOnCareerPage: boolean) {
+  return request<Job>(`/jobs/jobs/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ listed_on_career_page: listedOnCareerPage }),
+  });
+}
+
 export function deleteJob(id: string) {
   return request<void>(`/jobs/jobs/${id}/`, { method: 'DELETE' });
 }
@@ -587,7 +597,7 @@ export function updateCareerPageSetup(
   return request<CareerPageSetup>(`/career-pages/career-page/setup/${toQuery({ organization })}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ organization, ...data }),
   });
 }
 

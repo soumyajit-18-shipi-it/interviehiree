@@ -52,13 +52,18 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
   const saveSetup = async () => {
     try {
       if (!organizationId) {
+        toast('Organization is missing. Please refresh and try again.', 'error');
+        return;
+      }
+      if (!slug.trim()) {
+        toast('Career page slug cannot be blank.', 'error');
         return;
       }
       if (setupExists) {
         await updateCareerPageSetup(organizationId, {
           headline,
           subheadline,
-          slug,
+          slug: slug.trim(),
           is_live: true,
           brand_color: brandColor,
         });
@@ -67,7 +72,7 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
           organization: organizationId,
           headline,
           subheadline,
-          slug,
+          slug: slug.trim(),
           is_live: true,
           brand_color: brandColor,
         });
