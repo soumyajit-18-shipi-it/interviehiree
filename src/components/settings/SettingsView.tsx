@@ -1,14 +1,52 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Bell, Shield, X, Check, Camera, Mail, Phone, Building, Save } from 'lucide-react';
 import { clsx } from 'clsx';
+import {
+  ensureOrganizationId,
+  getOrganization,
+  getPreferences,
+  updateOrganization,
+  updatePreferences,
+} from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
-function CookieModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function CookieModal({
+  isOpen,
+  onClose,
+  organizationId,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  organizationId: string;
+}) {
+  const { toast } = useToast();
   const [preferences, setPreferences] = useState({
     performance: true,
     functional: true,
     targeting: false,
   });
+
+  useEffect(() => {
+    if (!isOpen || !organizationId) {
+      return;
+    }
+
+    const loadPrefs = async () => {
+      try {
+        const data = await getPreferences(organizationId);
+        setPreferences({
+          performance: data.cookie_settings.analytics,
+          functional: true,
+          targeting: data.cookie_settings.marketing,
+        });
+      } catch {
+        // Keep local defaults when preferences are not available yet.
+      }
+    };
+
+    loadPrefs();
+  }, [isOpen, organizationId]);
 
   if (!isOpen) return null;
 
@@ -75,7 +113,21 @@ function CookieModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 
           <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-3xl">
             <button
-              onClick={onClose}
+              onClick={async () => {
+                try {
+                  if (organizationId) {
+                    await updatePreferences(organizationId, {
+                      analytics: preferences.performance,
+                      marketing: preferences.targeting,
+                    });
+                  }
+                  toast('Cookie preferences saved.', 'success');
+                  onClose();
+                } catch (error) {
+                  console.error(error);
+                  toast('Unable to save cookie preferences.', 'error');
+                }
+              }}
               className="px-6 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
             >
               Save Preferences
@@ -88,7 +140,8 @@ function CookieModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
 }
 
 // ---- Profile Tab ----
-function ProfileTab() {
+function ProfileTab({ organizationId }: { organizationId: string }) {
+  const { toast } = useToast();
   const [profile, setProfile] = useState({
     firstName: 'Sarah',
     lastName: 'Connor',
@@ -100,10 +153,46 @@ function ProfileTab() {
   });
   const [saved, setSaved] = useState(false);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!organizationId) {
+      return;
+    }
+
+    const loadProfile = async () => {
+      try {
+        const organization = await getOrganization(organizationId);
+        setProfile((prev) => ({
+          ...prev,
+          company: organization.name,
+          email: organization.contact_email,
+          phone: prev.phone,
+          role: 'Org Admin',
+          bio: organization.description,
+        }));
+      } catch {
+        // Keep defaults when org profile is unavailable.
+      }
+    };
+
+    loadProfile();
+  }, [organizationId]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      if (organizationId) {
+        await updateOrganization(organizationId, {
+          name: profile.company,
+          location: profile.role,
+        });
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast('Profile settings saved.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Failed to save profile settings.', 'error');
+    }
   };
 
   return (
@@ -355,8 +444,24 @@ function DataPrivacyTab({ onOpenCookies }: { onOpenCookies: () => void }) {
 
 // ---- Main Settings View ----
 export default function SettingsView() {
+  const { toast } = useToast();
+  const [organizationId, setOrganizationId] = useState('');
   const [activeTab, setActiveTab] = useState('Profile');
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
+
+  useEffect(() => {
+    const loadOrg = async () => {
+      try {
+        const orgId = await ensureOrganizationId();
+        setOrganizationId(orgId);
+      } catch (error) {
+        console.error(error);
+        toast('No organization found for settings.', 'error');
+      }
+    };
+
+    loadOrg();
+  }, [toast]);
 
   const tabs = [
     { id: 'Profile', icon: User },
@@ -366,7 +471,7 @@ export default function SettingsView() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'Profile': return <ProfileTab />;
+      case 'Profile': return <ProfileTab organizationId={organizationId} />;
       case 'Notifications': return <NotificationsTab />;
       case 'Data & Privacy': return <DataPrivacyTab onOpenCookies={() => setIsCookieModalOpen(true)} />;
       default: return null;
@@ -420,7 +525,7 @@ export default function SettingsView() {
         </div>
       </div>
 
-      <CookieModal isOpen={isCookieModalOpen} onClose={() => setIsCookieModalOpen(false)} />
+      <CookieModal isOpen={isCookieModalOpen} onClose={() => setIsCookieModalOpen(false)} organizationId={organizationId} />
     </div>
   );
 }

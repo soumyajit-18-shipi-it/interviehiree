@@ -36,12 +36,12 @@ export default function CandidateSidePanel({ candidate, onClose }: any) {
                 <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                   {candidate.name}
                   <span className="bg-success/10 text-success border border-success/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                    85/100
+                    {typeof candidate?.score === 'number' ? `${candidate.score}/100` : 'AI Reviewed'}
                   </span>
                 </h2>
                 <div className="text-sm text-muted-foreground mt-1 flex items-center gap-3">
                   <span className="flex items-center gap-1"><Mail size={14} /> {candidate.email}</span>
-                  <span className="flex items-center gap-1"><Phone size={14} /> +1 234 567 890</span>
+                  <span className="flex items-center gap-1"><Phone size={14} /> {candidate.phone || 'Phone unavailable'}</span>
                 </div>
               </div>
             </div>
@@ -83,27 +83,22 @@ export default function CandidateSidePanel({ candidate, onClose }: any) {
                 <div className="bg-card border border-border rounded-2xl p-6">
                   <h3 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">Summary</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Experienced professional with a strong background in their field. Displays excellent communication skills and a solid track record of successful project deliveries. Looking to relocate and available to start within 30 days.
+                    {candidate?.summary || 'No summary available for this candidate yet.'}
                   </p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-1">
-                    <span className="text-xs font-bold text-muted-foreground uppercase">Experience</span>
-                    <span className="text-sm font-bold text-foreground">4 Years</span>
-                  </div>
-                  <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-1">
-                    <span className="text-xs font-bold text-muted-foreground uppercase">Location</span>
-                    <span className="text-sm font-bold text-foreground">New York, NY</span>
-                  </div>
-                  <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-1">
-                    <span className="text-xs font-bold text-muted-foreground uppercase">Notice Period</span>
-                    <span className="text-sm font-bold text-foreground">30 Days</span>
-                  </div>
-                  <div className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-1">
-                    <span className="text-xs font-bold text-muted-foreground uppercase">Expected CTC</span>
-                    <span className="text-sm font-bold text-foreground">$120,000</span>
-                  </div>
+                  {(candidate?.facts ?? [
+                    { label: 'Current Title', value: 'Not available' },
+                    { label: 'Source', value: 'Not available' },
+                    { label: 'Applied Stage', value: 'Not available' },
+                    { label: 'Score', value: 'N/A' },
+                  ]).map((fact: any) => (
+                    <div key={fact.label} className="bg-card border border-border rounded-2xl p-5 flex flex-col gap-1">
+                      <span className="text-xs font-bold text-muted-foreground uppercase">{fact.label}</span>
+                      <span className="text-sm font-bold text-foreground">{fact.value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

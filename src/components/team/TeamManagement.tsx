@@ -1,24 +1,99 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Mail, UserPlus, X, ChevronDown, CheckCircle, Shield, Users, Briefcase } from 'lucide-react';
 import { clsx } from 'clsx';
+import { createTeamMember, ensureOrganizationId, listTeam } from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
-const mockTeam = [
-  { id: '1', name: 'Sarah Connor', role: 'Head of Talent', type: 'Admin', status: 'Active', email: 'sarah@aiats.co', assignedJobs: 12 },
-  { id: '2', name: 'John Doe', role: 'Technical Recruiter', type: 'Recruiter', status: 'Active', email: 'john@aiats.co', assignedJobs: 5 },
-  { id: '3', name: 'Jane Smith', role: 'Sourcing Specialist', type: 'Interviewer', status: 'Invited', email: 'jane@aiats.co', assignedJobs: 2 },
-  { id: '4', name: 'Kyle Reese', role: 'Hiring Manager', type: 'Recruiter', status: 'Active', email: 'kyle@aiats.co', assignedJobs: 8 },
-];
+type TeamRow = {
+  id: string;
+  name: string;
+  role: string;
+  type: string;
+  status: string;
+  email: string;
+  assignedJobs: number;
+};
 
 export default function TeamManagement() {
+  const { toast } = useToast();
+  const [organizationId, setOrganizationId] = useState('');
+  const [team, setTeam] = useState<TeamRow[]>([]);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [inviteRole, setInviteRole] = useState('Recruiter');
+  const [inviteEmail, setInviteEmail] = useState('');
   const [permissions, setPermissions] = useState({ editJob: false, viewScores: true, schedule: true });
 
-  const filteredTeam = mockTeam.filter(member => 
+  const loadTeam = async () => {
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+      const response = await listTeam({ organization: orgId, page_size: 100 });
+      setTeam(
+        response.results.map((member) => ({
+          id: member.id,
+          name: member.display_name || `${member.first_name} ${member.last_name}`.trim(),
+          role: member.designation,
+          type: member.user_type,
+          status: member.status,
+          email: member.email,
+          assignedJobs: 0,
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+      toast('Unable to load team members.', 'error');
+    }
+  };
+
+  useEffect(() => {
+    loadTeam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) {
+      toast('Please enter an email to invite.', 'warning');
+      return;
+    }
+
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+      const username = inviteEmail.split('@')[0] || `user${Date.now()}`;
+      await createTeamMember({
+        organization: orgId,
+        username,
+        email: inviteEmail,
+        first_name: username,
+        last_name: '',
+        designation: inviteRole,
+        user_type: inviteRole,
+        status: 'Invited',
+      });
+      toast('Invite sent successfully.', 'success');
+      setInviteEmail('');
+      setIsInviteOpen(false);
+      await loadTeam();
+    } catch (error) {
+      console.error(error);
+      toast('Failed to send invite.', 'error');
+    }
+  };
+
+  const filteredTeam = team.filter(member => 
     member.name.toLowerCase().includes(search.toLowerCase()) ||
     member.email.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const summary = useMemo(
+    () => ({
+      totalMembers: team.length,
+      admins: team.filter((member) => member.type.toLowerCase() === 'admin').length,
+      pendingInvites: team.filter((member) => member.status.toLowerCase() === 'invited').length,
+    }),
+    [team],
   );
 
   return (
@@ -45,21 +120,21 @@ export default function TeamManagement() {
           <div className="p-2 bg-primary/10 text-primary rounded-xl"><Users size={18} /></div>
           <div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Members</p>
-            <p className="text-lg font-black text-foreground">12</p>
+            <p className="text-lg font-black text-foreground">{summary.totalMembers}</p>
           </div>
         </div>
         <div className="px-5 py-3 bg-card border border-border shadow-sm rounded-2xl flex items-center gap-3">
           <div className="p-2 bg-violet-500/10 text-violet-500 rounded-xl"><Shield size={18} /></div>
           <div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Admins</p>
-            <p className="text-lg font-black text-foreground">3</p>
+            <p className="text-lg font-black text-foreground">{summary.admins}</p>
           </div>
         </div>
         <div className="px-5 py-3 bg-card border border-border shadow-sm rounded-2xl flex items-center gap-3">
           <div className="p-2 bg-amber-500/10 text-amber-500 rounded-xl"><Mail size={18} /></div>
           <div>
             <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pending Invites</p>
-            <p className="text-lg font-black text-foreground">2</p>
+            <p className="text-lg font-black text-foreground">{summary.pendingInvites}</p>
           </div>
         </div>
       </div>
@@ -193,12 +268,11 @@ export default function TeamManagement() {
                 <div>
                   <label className="block text-xs font-bold text-foreground mb-2">EMAIL ADDRESSES</label>
                   <div className="p-2 bg-card border border-border rounded-xl shadow-sm min-h-[48px] flex flex-wrap gap-2 items-center focus-within:border-primary">
-                    <span className="px-2 py-1 bg-muted rounded-md text-xs font-medium flex items-center gap-1">
-                      alex@example.com <X size={12} className="cursor-pointer hover:text-danger" />
-                    </span>
                     <input 
                       type="text" 
                       placeholder="Add more emails..." 
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
                       className="flex-1 bg-transparent border-none focus:outline-none text-sm min-w-[150px]"
                     />
                   </div>
@@ -274,7 +348,7 @@ export default function TeamManagement() {
                   Cancel
                 </button>
                 <button 
-                  onClick={() => setIsInviteOpen(false)}
+                  onClick={handleInvite}
                   className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all cursor-pointer"
                 >
                   Send Invites

@@ -1,10 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Users, Briefcase, X, FileText, MapPin, Clock } from 'lucide-react';
 import { clsx } from 'clsx';
 import JobCard from './JobCard';
 import JobDetails from './JobDetails';
 import JobConfiguration from './JobConfiguration';
+import {
+  createJob,
+  ensureOrganizationId,
+  getJobPipeline,
+  listJobs,
+  type Job as ApiJob,
+  type JobPipeline,
+} from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
 type JobStatus = 'Published' | 'Draft' | 'Archived';
 
@@ -15,42 +24,88 @@ interface Job {
   createdDate: string;
   status: JobStatus;
   createdBy: string;
+  listedOnCareerPage?: boolean;
+  tags?: string[];
   stats: { total: number; resume: number; screening: number; interview: number };
 }
 
-const initialJobs: Job[] = [
-  { id: '1', title: 'Senior Product Designer', role: 'Design • Remote', createdDate: 'Mar 18, 2026', createdBy: 'Alice', status: 'Published', stats: { total: 142, resume: 85, screening: 32, interview: 12 } },
-  { id: '2', title: 'Full Stack Engineer', role: 'Engineering • NY', createdDate: 'Mar 15, 2026', createdBy: 'Bob', status: 'Published', stats: { total: 204, resume: 120, screening: 45, interview: 15 } },
-  { id: '3', title: 'Marketing Manager', role: 'Growth • Remote', createdDate: 'Mar 12, 2026', createdBy: 'Alice', status: 'Draft', stats: { total: 0, resume: 0, screening: 0, interview: 0 } },
-  { id: '4', title: 'Security Engineer', role: 'Engineering • Remote', createdDate: 'Feb 28, 2026', createdBy: 'Charlie', status: 'Archived', stats: { total: 89, resume: 45, screening: 12, interview: 4 } },
-];
+function mapApiStatus(status: string): JobStatus {
+  const normalized = status.toLowerCase();
+  if (normalized === 'published' || normalized === 'active') {
+    return 'Published';
+  }
+  if (normalized === 'archived') {
+    return 'Archived';
+  }
+  return 'Draft';
+}
 
-function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job) => void }) {
+function mapPipeline(pipeline?: JobPipeline): Job['stats'] {
+  return {
+    total: pipeline?.total ?? 0,
+    resume: pipeline?.resume_analysis ?? 0,
+    screening: pipeline?.recruiter_screening ?? 0,
+    interview: pipeline?.functional_interview ?? 0,
+  };
+}
+
+function mapApiJob(job: ApiJob, pipeline?: JobPipeline): Job {
+  return {
+    id: job.id,
+    title: job.title,
+    role: `${job.role} • ${job.location}`,
+    createdDate: new Date(job.created_at).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+    status: mapApiStatus(job.status),
+    createdBy: job.created_by || 'System',
+    listedOnCareerPage: true,
+    tags: [],
+    stats: mapPipeline(pipeline),
+  };
+}
+
+function NewJobModal({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (payload: {
+    title: string;
+    department: string;
+    location: string;
+    status: JobStatus;
+  }) => Promise<void>;
+}) {
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('Engineering');
   const [location, setLocation] = useState('Remote');
   const [type, setType] = useState('Full-time');
   const [status, setStatus] = useState<JobStatus>('Draft');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const departments = ['Engineering', 'Design', 'Growth', 'Marketing', 'Sales', 'HR', 'Finance'];
   const locations = ['Remote', 'NYC', 'San Francisco', 'Delhi', 'London', 'Berlin'];
   const types = ['Full-time', 'Part-time', 'Contract', 'Internship'];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    onAdd({
-      id: String(Date.now()),
-      title: title.trim(),
-      role: `${department} • ${location}`,
-      createdDate: dateStr,
-      createdBy: 'Me',
-      status,
-      stats: { total: 0, resume: 0, screening: 0, interview: 0 },
-    });
-    onClose();
+    if (!title.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      await onCreate({
+        title: title.trim(),
+        department,
+        location,
+        status,
+      });
+      onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -67,7 +122,6 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
         className="bg-card rounded-3xl w-full max-w-xl border border-border shadow-2xl flex flex-col max-h-[90vh]"
       >
-        {/* Modal Header */}
         <div className="p-6 border-b border-border flex items-center justify-between bg-muted/20">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
@@ -75,23 +129,29 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
             </div>
             <div>
               <h3 className="font-bold text-lg text-foreground">Create New Job</h3>
-              <p className="text-xs text-muted-foreground font-medium">Fill in the details to post a new position.</p>
+              <p className="text-xs text-muted-foreground font-medium">
+                Fill in the details to post a new position.
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors">
+          <button
+            onClick={onClose}
+            className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+          >
             <X size={18} />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
-          {/* Job Title */}
           <div>
             <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
               Job Title *
             </label>
             <div className="relative">
-              <FileText size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <FileText
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
               <input
                 type="text"
                 required
@@ -103,46 +163,54 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
             </div>
           </div>
 
-          {/* Department + Location */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">Department</label>
+              <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
+                Department
+              </label>
               <select
                 value={department}
                 onChange={(e) => setDepartment(e.target.value)}
                 className="w-full px-3 py-3 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground appearance-none transition-all"
               >
-                {departments.map(d => <option key={d}>{d}</option>)}
+                {departments.map((d) => (
+                  <option key={d}>{d}</option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
-                <MapPin size={12} className="inline mr-1" />Location
+                <MapPin size={12} className="inline mr-1" />
+                Location
               </label>
               <select
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 className="w-full px-3 py-3 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground appearance-none transition-all"
               >
-                {locations.map(l => <option key={l}>{l}</option>)}
+                {locations.map((l) => (
+                  <option key={l}>{l}</option>
+                ))}
               </select>
             </div>
           </div>
 
-          {/* Job Type */}
           <div>
             <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
-              <Clock size={12} className="inline mr-1" />Employment Type
+              <Clock size={12} className="inline mr-1" />
+              Employment Type
             </label>
             <div className="flex gap-2 flex-wrap">
-              {types.map(t => (
+              {types.map((t) => (
                 <button
                   type="button"
                   key={t}
                   onClick={() => setType(t)}
                   className={clsx(
                     'px-4 py-2 rounded-xl text-xs font-bold border transition-all',
-                    type === t ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20' : 'bg-card border-border text-muted-foreground hover:border-primary/50'
+                    type === t
+                      ? 'bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20'
+                      : 'bg-card border-border text-muted-foreground hover:border-primary/50'
                   )}
                 >
                   {t}
@@ -151,11 +219,12 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
             </div>
           </div>
 
-          {/* Initial Status */}
           <div>
-            <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">Initial Status</label>
+            <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
+              Initial Status
+            </label>
             <div className="flex gap-2">
-              {(['Draft', 'Published'] as JobStatus[]).map(s => (
+              {(['Draft', 'Published'] as JobStatus[]).map((s) => (
                 <button
                   type="button"
                   key={s}
@@ -163,7 +232,9 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
                   className={clsx(
                     'flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all',
                     status === s
-                      ? s === 'Published' ? 'bg-success/10 text-success border-success/30' : 'bg-muted text-foreground border-border'
+                      ? s === 'Published'
+                        ? 'bg-success/10 text-success border-success/30'
+                        : 'bg-muted text-foreground border-border'
                       : 'bg-card border-border text-muted-foreground hover:bg-muted'
                   )}
                 >
@@ -174,7 +245,6 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
           </div>
         </form>
 
-        {/* Footer */}
         <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-3xl">
           <button
             type="button"
@@ -188,9 +258,10 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
               const form = (e.currentTarget.closest('.flex.flex-col') as HTMLElement)?.querySelector('form');
               form?.requestSubmit();
             }}
-            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all"
+            disabled={isSubmitting}
+            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-70"
           >
-            Create Job
+            {isSubmitting ? 'Creating...' : 'Create Job'}
           </button>
         </div>
       </motion.div>
@@ -201,37 +272,236 @@ function NewJobModal({ onClose, onAdd }: { onClose: () => void; onAdd: (job: Job
 type FilterStatus = JobStatus | 'All';
 
 export default function Dashboard() {
-  const [jobs, setJobs] = useState<Job[]>(initialJobs);
+  const { toast } = useToast();
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [organizationId, setOrganizationId] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('All');
   const [createdByFilter, setCreatedByFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<'config' | 'responses' | null>(null);
-  const [initialTab, setInitialTab] = useState<'Overview' | 'Resume Analysis' | 'Recruiter Screening'>('Overview');
+  const [initialTab, setInitialTab] = useState<
+    'Overview' | 'Resume Analysis' | 'Recruiter Screening' | 'Functional Interview'
+  >('Overview');
   const [isLoading, setIsLoading] = useState(false);
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
 
-  const handleJobClick = (job: Job, tab?: any) => {
+  const loadJobs = async () => {
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+
+      const jobsResponse = await listJobs({ organization: orgId, page_size: 100 });
+
+      const pipelines = await Promise.all(
+        jobsResponse.results.map((job) =>
+          getJobPipeline(job.id)
+            .then((pipeline) => ({ id: job.id, pipeline }))
+            .catch(() => ({ id: job.id, pipeline: undefined }))
+        )
+      );
+
+      const pipelineByJob = new Map(pipelines.map((item) => [item.id, item.pipeline]));
+      setJobs(
+        jobsResponse.results.map((job) => ({
+          ...mapApiJob(job, pipelineByJob.get(job.id)),
+          listedOnCareerPage: true,
+          tags: [],
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+      toast('Failed to load jobs from API.', 'error');
+    }
+  };
+
+  useEffect(() => {
+    loadJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleJobClick = (
+    job: Job,
+    tab?: 'Overview' | 'Resume Analysis' | 'Recruiter Screening' | 'Functional Interview'
+  ) => {
     setIsLoading(true);
     setSelectedJob(job);
+
     if (tab) {
       setInitialTab(tab);
       setViewMode('responses');
     } else {
       setViewMode('config');
     }
+
     setTimeout(() => {
       setIsLoading(false);
     }, 800);
   };
 
-  const handleAddJob = (job: Job) => {
-    setJobs(prev => [job, ...prev]);
+  const handleAddJob = async (payload: {
+    title: string;
+    department: string;
+    location: string;
+    status: JobStatus;
+  }) => {
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+
+      await createJob({
+        organization: orgId,
+        title: payload.title,
+        role: payload.department,
+        business_unit: payload.department,
+        description: `${payload.title} role created from dashboard`,
+        location: payload.location,
+        status: payload.status.toLowerCase(),
+      });
+
+      toast('Job created successfully.', 'success');
+      await loadJobs();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to create job. Please try again.', 'error');
+      throw error;
+    }
   };
 
-  const creatorOptions = ['All', ...Array.from(new Set(jobs.map(job => job.createdBy)))];
+  const handleEditJobName = (
+    jobId: string,
+    payload: { title: string; jobId?: string; tags: string[] }
+  ) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              title: payload.title,
+              tags: payload.tags,
+            }
+          : job
+      )
+    );
 
-  const filteredJobs = jobs.filter(job => {
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            title: payload.title,
+            tags: payload.tags,
+          }
+        : prev
+    );
+
+    toast('Job name updated successfully.', 'success');
+  };
+
+  const handleToggleCareerPage = (jobId: string) => {
+    const current = jobs.find((job) => job.id === jobId);
+    const nextListed = !(current?.listedOnCareerPage ?? true);
+
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              listedOnCareerPage: nextListed,
+            }
+          : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            listedOnCareerPage: nextListed,
+          }
+        : prev
+    );
+
+    toast(
+      nextListed ? 'Job listed on career page.' : 'Job unlisted from career page.',
+      'success'
+    );
+  };
+
+  const handleArchiveJob = (jobId: string) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              status: 'Archived',
+            }
+          : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            status: 'Archived',
+          }
+        : prev
+    );
+
+    toast('Job archived successfully.', 'success');
+  };
+
+  const handleUnarchiveJob = (jobId: string) => {
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === jobId
+          ? {
+              ...job,
+              status: 'Draft',
+            }
+          : job
+      )
+    );
+
+    setSelectedJob((prev) =>
+      prev && prev.id === jobId
+        ? {
+            ...prev,
+            status: 'Draft',
+          }
+        : prev
+    );
+
+    toast('Job unarchived successfully.', 'success');
+  };
+
+  const handleDuplicateJob = (jobId: string) => {
+    const source = jobs.find((job) => job.id === jobId);
+    if (!source) return;
+
+    const duplicate: Job = {
+      ...source,
+      id: `${source.id}-copy-${Date.now()}`,
+      title: `${source.title} (Copy)`,
+      createdDate: new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      status: 'Draft',
+      listedOnCareerPage: false,
+    };
+
+    setJobs((prev) => [duplicate, ...prev]);
+    toast('Job duplicated successfully.', 'success');
+  };
+
+  const creatorOptions = useMemo(
+    () => ['All', ...Array.from(new Set(jobs.map((job) => job.createdBy)))],
+    [jobs]
+  );
+
+  const filteredJobs = jobs.filter((job) => {
     const matchesStatus = activeFilter === 'All' || job.status === activeFilter;
     const matchesSearch = job.title.toLowerCase().includes(search.toLowerCase());
     const matchesCreator = createdByFilter === 'All' || job.createdBy === createdByFilter;
@@ -244,10 +514,7 @@ export default function Dashboard() {
     <>
       <AnimatePresence>
         {isNewJobModalOpen && (
-          <NewJobModal
-            onClose={() => setIsNewJobModalOpen(false)}
-            onAdd={handleAddJob}
-          />
+          <NewJobModal onClose={() => setIsNewJobModalOpen(false)} onCreate={handleAddJob} />
         )}
       </AnimatePresence>
 
@@ -270,22 +537,26 @@ export default function Dashboard() {
                 <div className="h-[300px] bg-[var(--color-secondary)] border border-[var(--color-border)] rounded-3xl animate-pulse" />
               </div>
             </motion.div>
+          ) : viewMode === 'config' ? (
+            <JobConfiguration
+              key="config"
+              job={selectedJob}
+              onBack={() => {
+                setSelectedJob(null);
+                setViewMode(null);
+              }}
+              onViewResponses={() => setViewMode('responses')}
+            />
           ) : (
-            viewMode === 'config' ? (
-              <JobConfiguration
-                key="config"
-                job={selectedJob}
-                onBack={() => { setSelectedJob(null); setViewMode(null); }}
-                onViewResponses={() => setViewMode('responses')}
-              />
-            ) : (
-              <JobDetails
-                key="details"
-                job={selectedJob}
-                onBack={() => { setSelectedJob(null); setViewMode(null); }}
-                initialTab={initialTab}
-              />
-            )
+            <JobDetails
+              key="details"
+              job={selectedJob}
+              onBack={() => {
+                setSelectedJob(null);
+                setViewMode(null);
+              }}
+              initialTab={initialTab}
+            />
           )
         ) : (
           <motion.div
@@ -295,7 +566,6 @@ export default function Dashboard() {
             exit={{ opacity: 0 }}
             className="space-y-8"
           >
-            {/* Top Header */}
             <div className="flex items-center justify-between pb-4">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
@@ -305,7 +575,10 @@ export default function Dashboard() {
 
               <div className="flex items-center gap-4">
                 <div className="relative w-80">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                  <Search
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    size={18}
+                  />
                   <input
                     type="text"
                     placeholder="Search by job name or role name..."
@@ -324,12 +597,13 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Filter Toolbar */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <div className="flex bg-muted/50 p-1 rounded-full border border-border/50">
                   {filterTabs.map((tab) => {
-                    const jobCount = tab === 'All' ? jobs.length : jobs.filter(j => j.status === tab).length;
+                    const jobCount =
+                      tab === 'All' ? jobs.length : jobs.filter((j) => j.status === tab).length;
+
                     return (
                       <button
                         key={tab}
@@ -341,7 +615,9 @@ export default function Dashboard() {
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                         )}
                       >
-                        <span className="relative z-10">{tab} ({jobCount})</span>
+                        <span className="relative z-10">
+                          {tab} ({jobCount})
+                        </span>
                       </button>
                     );
                   })}
@@ -365,12 +641,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Jobs Grid */}
             <AnimatePresence mode="popLayout">
-              <motion.div
-                className="grid grid-cols-1 xl:grid-cols-2 gap-6"
-                layout
-              >
+              <motion.div className="grid grid-cols-1 xl:grid-cols-2 gap-6" layout>
                 {filteredJobs.map((job) => (
                   <motion.div
                     key={job.id}
@@ -381,7 +653,16 @@ export default function Dashboard() {
                     layout
                     onClick={() => handleJobClick(job)}
                   >
-                    <JobCard job={job} onStatClick={(tab: any) => handleJobClick(job, tab)} />
+                    <JobCard
+                      job={job}
+                      onStatClick={(tab: any) => handleJobClick(job, tab)}
+                      onOpenConfig={() => handleJobClick(job)}
+                      onEditJobName={(payload) => handleEditJobName(job.id, payload)}
+                      onUnlistFromCareerPage={() => handleToggleCareerPage(job.id)}
+                      onArchiveJob={() => handleArchiveJob(job.id)}
+                      onUnarchiveJob={() => handleUnarchiveJob(job.id)}
+                      onDuplicateJob={() => handleDuplicateJob(job.id)}
+                    />
                   </motion.div>
                 ))}
               </motion.div>

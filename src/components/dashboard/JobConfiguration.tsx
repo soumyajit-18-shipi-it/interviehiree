@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, ChevronRight, Plus, Info, Edit, Globe, FileText, Video, Briefcase,
+  ArrowLeft, ChevronRight, Plus, Info, Globe, FileText, Video, Briefcase,
   Check, AlertTriangle, Star, Clock, Zap, Trash2, GripVertical
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { ensureOrganizationId, getCareerPageJobs, getCareerPageSetup, updateJobCareerPageListing } from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 interface CriterionItem {
@@ -424,6 +426,79 @@ function InterviewPanel() {
 
 // ─── Career Page Panel (existing, now extracted) ──────────────────────────
 function CareerPagePanel({ job }: { job: any }) {
+  const { toast } = useToast();
+  const [setup, setSetup] = useState<any | null>(null);
+  const [jobsOnPage, setJobsOnPage] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [listedOnCareerPage, setListedOnCareerPage] = useState<boolean>(job.listedOnCareerPage ?? true);
+  const [isToggling, setIsToggling] = useState(false);
+
+  const jobSlug = job.title
+    ? job.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    : 'job';
+
+  const careerSlug = setup?.slug || jobSlug;
+  const careerUrl = setup?.live_url || `/career-pages/career-page/${careerSlug}/`;
+
+  const loadCareerPageSetup = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const organizationId = await ensureOrganizationId();
+      const data = await getCareerPageSetup(organizationId);
+      setSetup(data);
+
+      if (data?.slug) {
+        const careers = await getCareerPageJobs({ slug: data.slug, page_size: 1 });
+        if (Array.isArray(careers)) {
+          setJobsOnPage(careers.length);
+        } else if (typeof careers?.count === 'number') {
+          setJobsOnPage(careers.count);
+        } else if (Array.isArray(careers?.results)) {
+          setJobsOnPage(careers.results.length);
+        } else {
+          setJobsOnPage(0);
+        }
+      } else {
+        setJobsOnPage(0);
+      }
+    } catch (err) {
+      console.error(err);
+      setSetup(null);
+      setJobsOnPage(0);
+      const status = typeof err === 'object' && err !== null && 'status' in err ? (err as any).status : null;
+      if (status === 404) {
+        setError('No career page setup found yet. Create a career page in Settings first.');
+      } else {
+        setError('Career page settings could not be loaded.');
+        toast('Unable to load career page settings.', 'error');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCareerPageSetup();
+  }, [job.id]);
+
+  const handleToggleCareerListing = async () => {
+    setIsToggling(true);
+    try {
+      const nextListed = !listedOnCareerPage;
+      await updateJobCareerPageListing(job.id, nextListed);
+      setListedOnCareerPage(nextListed);
+      toast(nextListed ? 'Job enabled on career page.' : 'Job disabled on career page.', 'success');
+    } catch (err) {
+      console.error(err);
+      toast('Unable to update career page listing.', 'error');
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-full">
       <div className="flex items-center gap-2 mb-6">
@@ -433,44 +508,92 @@ function CareerPagePanel({ job }: { job: any }) {
         </div>
       </div>
 
-      <button className="self-start flex items-center gap-2 px-4 py-2 border border-border bg-muted/50 text-foreground rounded-lg text-xs font-bold hover:bg-muted transition-all mb-8">
-        <Plus size={14} /> Add Application Form
-      </button>
-
-      <div className="border border-border rounded-xl p-6 bg-background flex-1 flex flex-col">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-sm text-foreground uppercase tracking-wider">Job Description</h3>
-          <button className="flex items-center gap-1.5 text-primary text-xs font-bold hover:underline">
-            <Edit size={12} /> Edit
+      {isLoading ? (
+        <div className="px-6 py-10 rounded-3xl border border-border bg-muted/70 text-center text-sm text-muted-foreground">
+          Loading career page settings...
+        </div>
+      ) : error ? (
+        <div className="space-y-4 px-6 py-8 rounded-3xl border border-border bg-muted/70 text-sm text-muted-foreground">
+          <p>{error}</p>
+          <button
+            onClick={loadCareerPageSetup}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl text-sm font-semibold text-primary hover:bg-primary/5 transition-all"
+          >
+            Refresh career page data
           </button>
         </div>
-
-        <div className="prose prose-sm max-w-none text-muted-foreground flex-1">
-          <h1 className="text-2xl font-black text-foreground mb-1">{job.title}</h1>
-          <p className="text-sm font-semibold text-foreground mb-3">Alpha • 📍 Delhi, India</p>
-          <div className="flex gap-2 mb-6">
-            <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">Full Time</span>
-            <span className="px-2 py-1 bg-muted rounded-md text-[10px] font-bold uppercase tracking-wider">Fresher</span>
-          </div>
-          <h4 className="font-bold text-foreground">Job Overview</h4>
-          <p className="mb-4">We are seeking a talented individual to join our growing team. You will be responsible for end-to-end delivery of the assigned role.</p>
-          <h4 className="font-bold text-foreground">Key Responsibilities</h4>
-          <ul>
-            <li>Collaborate with cross-functional teams</li>
-            <li>Deliver high-quality output on spec</li>
-            <li>Maintain platform stability and performance</li>
-          </ul>
-        </div>
-
-        <div className="mt-8 flex items-center justify-between border-t border-border pt-4">
-          <div className="text-xs text-muted-foreground">
-            Live URL: <a href="https://alpha.interviehire.ai/jobs" className="text-primary hover:underline">alpha.interviehire.ai/jobs</a>
-          </div>
-          <button className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
-            Enable
+      ) : (
+        <>
+          <button className="self-start flex items-center gap-2 px-4 py-2 border border-border bg-muted/50 text-foreground rounded-lg text-xs font-bold hover:bg-muted transition-all mb-8">
+            <Plus size={14} /> Add Application Form
           </button>
-        </div>
-      </div>
+
+          <div className="border border-border rounded-xl p-6 bg-background flex-1 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-sm text-foreground uppercase tracking-wider">Career Page Settings</h3>
+              <button
+                onClick={loadCareerPageSetup}
+                className="text-xs font-bold text-primary hover:underline"
+              >
+                Refresh
+              </button>
+            </div>
+
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold mb-2">Career Page Slug</div>
+                  <div className="font-semibold text-foreground">{setup?.slug || 'not configured'}</div>
+                </div>
+                <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold mb-2">Live Status</div>
+                  <div className="font-semibold text-foreground">{setup?.is_live ? 'Live' : 'Draft'}</div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold mb-2">Career Page URL</div>
+                <a href={careerUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline break-all">
+                  {careerUrl}
+                </a>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold mb-2">Headline</div>
+                <div className="text-foreground">{setup?.headline || 'No headline set'}</div>
+                <div className="text-xs text-muted-foreground mt-2">{setup?.subheadline || 'No subheadline configured'}</div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold mb-2">Jobs on Career Page</div>
+                  <div className="font-semibold text-foreground">{jobsOnPage ?? 0}</div>
+                </div>
+                <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                  <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold mb-2">Brand Color</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg border" style={{ backgroundColor: setup?.brand_color || '#000' }} />
+                    <span className="font-semibold text-foreground">{setup?.brand_color || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs text-muted-foreground">
+                Job preview path: <span className="text-foreground">{`/jobs/${jobSlug}`}</span>
+              </div>
+              <button
+                onClick={handleToggleCareerListing}
+                disabled={isToggling}
+                className="px-6 py-2 bg-primary text-white rounded-xl text-xs font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isToggling ? 'Updating…' : listedOnCareerPage ? 'Disable on Career Page' : 'Enable on Career Page'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -501,22 +624,22 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
   };
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-3xl overflow-hidden -m-8 relative z-50">
+    <div className="flex flex-col h-full bg-background rounded-3xl overflow-hidden overflow-x-hidden w-full max-w-full relative z-50">
       {/* Header */}
       <div className="h-16 border-b border-border bg-card px-8 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
+            className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors shrink-0"
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground">Jobs</span>
-            <ChevronRight size={14} className="text-border" />
-            <span className="font-semibold text-foreground truncate max-w-[200px]">{job.title}</span>
+          <div className="flex items-center gap-2 text-sm min-w-0">
+            <span className="text-muted-foreground shrink-0">Jobs</span>
+            <ChevronRight size={14} className="text-border shrink-0" />
+            <span className="font-semibold text-foreground truncate">{job.title}</span>
             {job.status === 'Published' && (
-              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2">
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold ml-2 shrink-0">
                 Published
               </span>
             )}

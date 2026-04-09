@@ -1,7 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, X, ShieldCheck, Palette, LayoutTemplate, Eye, Link as LinkIcon, ExternalLink } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
+import {
+  createCareerPageSetup,
+  ensureOrganizationId,
+  getCareerPageSetup,
+  updateCareerPageSetup,
+} from '../../lib/api';
+import { useToast } from '../ui/Toast';
 
 interface CareerPageSetupProps {
   isOpen: boolean;
@@ -9,7 +16,74 @@ interface CareerPageSetupProps {
 }
 
 export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProps) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('Theme');
+  const [organizationId, setOrganizationId] = useState('');
+  const [brandColor, setBrandColor] = useState('#6B46FF');
+  const [companyName, setCompanyName] = useState('Acme Corporation');
+  const [headline, setHeadline] = useState('Join us in building the future.');
+  const [subheadline, setSubheadline] = useState('We are a fast-growing tech startup dedicated to solving hard problems.');
+  const [slug, setSlug] = useState('careers');
+  const [setupExists, setSetupExists] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const loadSetup = async () => {
+      try {
+        const orgId = await ensureOrganizationId();
+        setOrganizationId(orgId);
+        const setup = await getCareerPageSetup(orgId);
+        setBrandColor(setup.brand_color || '#6B46FF');
+        setHeadline(setup.headline || headline);
+        setSubheadline(setup.subheadline || subheadline);
+        setSlug(setup.slug || slug);
+        setSetupExists(true);
+      } catch {
+        setSetupExists(false);
+      }
+    };
+
+    loadSetup();
+  }, [isOpen]);
+
+  const saveSetup = async () => {
+    try {
+      if (!organizationId) {
+        toast('Organization is missing. Please refresh and try again.', 'error');
+        return;
+      }
+      if (!slug.trim()) {
+        toast('Career page slug cannot be blank.', 'error');
+        return;
+      }
+      if (setupExists) {
+        await updateCareerPageSetup(organizationId, {
+          headline,
+          subheadline,
+          slug: slug.trim(),
+          is_live: true,
+          brand_color: brandColor,
+        });
+      } else {
+        await createCareerPageSetup({
+          organization: organizationId,
+          headline,
+          subheadline,
+          slug: slug.trim(),
+          is_live: true,
+          brand_color: brandColor,
+        });
+      }
+      toast('Career page settings saved.', 'success');
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to save career page settings.', 'error');
+    }
+  };
 
   const tabs = [
     { id: 'Theme', icon: Palette },
@@ -48,7 +122,10 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                 <button className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-muted transition-colors">
                   <LinkIcon size={14} /> Copy Embed
                 </button>
-                <button className="flex items-center gap-2 px-3 py-1.5 border border-primary/20 bg-primary/5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-colors">
+                  <button
+                    onClick={() => window.open(`/career-pages/career-page/${slug}/`, '_blank')}
+                    className="flex items-center gap-2 px-3 py-1.5 border border-primary/20 bg-primary/5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+                  >
                   <ExternalLink size={14} /> View Live
                 </button>
                 <div className="w-px h-6 bg-border mx-1"></div>
@@ -100,9 +177,17 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-3 p-2 border border-border rounded-xl bg-background flex-1">
                         <div className="w-8 h-8 rounded-lg bg-primary shadow-sm border border-black/10"></div>
-                        <input type="text" defaultValue="#6B46FF" className="bg-transparent border-none text-sm font-medium focus:outline-none uppercase w-full" />
+                        <input
+                          type="text"
+                          value={brandColor}
+                          onChange={(e) => setBrandColor(e.target.value)}
+                          className="bg-transparent border-none text-sm font-medium focus:outline-none uppercase w-full"
+                        />
                       </div>
-                      <button className="px-4 py-3 bg-muted rounded-xl text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">
+                      <button
+                        onClick={() => setBrandColor('#6B46FF')}
+                        className="px-4 py-3 bg-muted rounded-xl text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         Reset
                       </button>
                     </div>
@@ -116,7 +201,8 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                     <label className="block text-xs font-bold text-foreground mb-1.5">COMPANY NAME</label>
                     <input
                       type="text"
-                      defaultValue="Acme Corporation"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium"
                     />
                   </div>
@@ -124,7 +210,8 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                     <label className="block text-xs font-bold text-foreground mb-1.5">HERO TITLE</label>
                     <input
                       type="text"
-                      defaultValue="Join us in building the future."
+                      value={headline}
+                      onChange={(e) => setHeadline(e.target.value)}
                       className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium"
                     />
                   </div>
@@ -132,8 +219,18 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                     <label className="block text-xs font-bold text-foreground mb-1.5">ABOUT US</label>
                     <textarea
                       rows={4}
-                      defaultValue="We are a fast-growing tech startup dedicated to solving hard problems."
+                      value={subheadline}
+                      onChange={(e) => setSubheadline(e.target.value)}
                       className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-foreground mb-1.5">CAREER PAGE SLUG</label>
+                    <input
+                      type="text"
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium"
                     />
                   </div>
                 </div>
@@ -177,7 +274,7 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                 Cancel
               </button>
               <button 
-                onClick={onClose}
+                onClick={saveSetup}
                 className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all cursor-pointer"
               >
                 Save Changes

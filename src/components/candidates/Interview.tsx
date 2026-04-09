@@ -1,12 +1,43 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Sparkles, ClipboardCheck } from 'lucide-react';
+import { ensureOrganizationId, listInterviews } from '../../lib/api';
+import { useToast } from '../ui/Toast';
+
+type InterviewCandidate = {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  score: string;
+};
 
 export default function Interview() {
-  const mockCandidates = [
-    { name: 'Sarah Jenkins', role: 'Product Designer', status: 'In Evaluation', score: '85%' },
-    { name: 'Alex Rivera', role: 'Frontend Engineer', status: 'Slightly Behind', score: '72%' },
-    { name: 'Michael Chen', role: 'Data Scientist', status: 'Highly Recommended', score: '93%' },
-  ];
+  const { toast } = useToast();
+  const [candidates, setCandidates] = useState<InterviewCandidate[]>([]);
+
+  useEffect(() => {
+    const loadInterviews = async () => {
+      try {
+        const organization = await ensureOrganizationId();
+        const response = await listInterviews({ organization, page_size: 100 });
+        setCandidates(
+          response.results.map((item) => ({
+            id: item.id,
+            name: `Application ${item.application.slice(0, 8)}`,
+            role: item.interview_type,
+            status: item.status,
+            score: item.score !== null ? `${item.score}%` : 'N/A',
+          }))
+        );
+      } catch (error) {
+        console.error(error);
+        toast('Unable to load functional interviews.', 'error');
+      }
+    };
+
+    loadInterviews();
+  }, [toast]);
 
   return (
     <div className="space-y-8">
@@ -31,9 +62,9 @@ export default function Interview() {
           </h3>
 
           <div className="space-y-3">
-            {mockCandidates.map((candidate, index) => (
+            {candidates.map((candidate, index) => (
               <motion.div
-                key={candidate.name}
+                key={candidate.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
