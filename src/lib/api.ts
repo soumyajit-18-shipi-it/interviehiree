@@ -290,7 +290,7 @@ export function listTeam(params: {
   page?: number;
   page_size?: number;
 }) {
-  return request<PaginatedResponse<TeamMember>>(`/accounts/team/${toQuery(params)}`);
+  return request<TeamMember[] | PaginatedResponse<TeamMember>>(`/accounts/team/${toQuery(params)}`);
 }
 
 export function createTeamMember(data: {
