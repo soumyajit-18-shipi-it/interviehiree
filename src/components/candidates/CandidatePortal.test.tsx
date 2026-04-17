@@ -5,6 +5,11 @@ import CandidatePortal from './CandidatePortal';
 vi.mock('../../lib/api', () => ({
   ensureOrganizationId: vi.fn().mockResolvedValue('org-1'),
   getCareerPageSetup: vi.fn().mockResolvedValue({ slug: 'careers' }),
+  getCareerPageDetails: vi.fn().mockResolvedValue({
+    slug: 'careers',
+    headline: 'Join our engineering team',
+    subheadline: 'Build reliable APIs with us.',
+  }),
   getCareerPageJobs: vi.fn().mockResolvedValue({
     count: 1,
     next: null,

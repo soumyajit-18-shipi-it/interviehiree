@@ -23,6 +23,7 @@ import {
   RotateCcw,
   FileBadge,
   LockKeyhole,
+  Trash2,
   ChevronDown,
   Video,
   type LucideIcon,
@@ -51,6 +52,7 @@ interface JobCardProps {
   onArchiveJob?: () => void;
   onUnarchiveJob?: () => void;
   onDuplicateJob?: () => void;
+  onDeleteJob?: () => void;
 }
 
 type InterviewSettingsState = {
@@ -82,6 +84,7 @@ export default function JobCard({
   onArchiveJob,
   onUnarchiveJob,
   onDuplicateJob,
+  onDeleteJob,
 }: JobCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -251,6 +254,17 @@ export default function JobCard({
                   }}
                   danger={job.status !== 'Archived'}
                 />
+                {job.status === 'Archived' ? (
+                  <MenuItem
+                    icon={Trash2}
+                    label="Delete Permanently"
+                    onClick={() => {
+                      onDeleteJob?.();
+                      setIsMenuOpen(false);
+                    }}
+                    danger
+                  />
+                ) : null}
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ import { MapPin, Clock, ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-rea
 import ApplicationForm from './ApplicationForm';
 import {
   ensureOrganizationId,
+  getCareerPageDetails,
   getCareerPageJobs,
   getCareerPageSetup,
   listJobs,
@@ -25,6 +26,8 @@ export default function CandidatePortal() {
   const { toast } = useToast();
   const [jobs, setJobs] = useState<PortalJob[]>(fallbackJobs);
   const [organizationId, setOrganizationId] = useState('');
+  const [portalHeadline, setPortalHeadline] = useState('Shape the Future of AI.');
+  const [portalSubheadline, setPortalSubheadline] = useState("We're building the next generation of recruitment tools. Explore our open positions and start your journey with us.");
   const [selectedJob, setSelectedJob] = useState<PortalJob | null>(null);
   const [isApplied, setIsApplied] = useState(false);
 
@@ -38,6 +41,14 @@ export default function CandidatePortal() {
         try {
           const setup = await getCareerPageSetup(orgId);
           if (setup?.slug) {
+            const details = await getCareerPageDetails(setup.slug).catch(() => null);
+            setPortalHeadline(details?.headline || setup.headline || 'Shape the Future of AI.');
+            setPortalSubheadline(
+              details?.subheadline ||
+              setup.subheadline ||
+              "We're building the next generation of recruitment tools. Explore our open positions and start your journey with us."
+            );
+
             const careerJobs = await getCareerPageJobs({ slug: setup.slug, page_size: 50 });
             apiJobs = careerJobs.results.map((job) => ({
               id: job.id,
@@ -118,7 +129,7 @@ export default function CandidatePortal() {
             transition={{ delay: 0.1 }}
             className="text-5xl md:text-6xl font-extrabold tracking-tight gradient-text"
           >
-            Shape the Future of AI.
+            {portalHeadline}
           </motion.h1>
           <motion.p 
             initial={{ opacity: 0 }}
@@ -126,7 +137,7 @@ export default function CandidatePortal() {
             transition={{ delay: 0.2 }}
             className="text-[var(--muted-foreground)] text-lg max-w-2xl mx-auto"
           >
-            We're building the next generation of recruitment tools. Explore our open positions and start your journey with us.
+            {portalSubheadline}
           </motion.p>
         </header>
 

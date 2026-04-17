@@ -36,6 +36,7 @@ const teamMembers = [
 vi.mock('../../lib/api', () => ({
   ensureOrganizationId: vi.fn().mockResolvedValue('org-1'),
   listTeam: vi.fn(),
+  getTeamMember: vi.fn(),
   listJobs: vi.fn(),
   createTeamMember: vi.fn(),
   updateTeamMember: vi.fn(),
@@ -45,6 +46,7 @@ vi.mock('../../lib/api', () => ({
 import {
   createTeamMember,
   deleteTeamMember,
+  getTeamMember,
   listJobs,
   listTeam,
   updateTeamMember,
@@ -67,6 +69,11 @@ describe('TeamManagement', () => {
       previous: null,
       results: [],
     }));
+
+    vi.mocked(getTeamMember).mockImplementation(async (memberId: string) => {
+      const member = teamMembers.find((item) => item.id === memberId) ?? teamMembers[0];
+      return { ...member } as never;
+    });
 
     vi.mocked(createTeamMember).mockResolvedValue({ id: 'tm-3' } as never);
     vi.mocked(updateTeamMember).mockResolvedValue({ id: 'tm-1' } as never);

@@ -7,9 +7,13 @@ import JobDetails from './JobDetails';
 import JobConfiguration from './JobConfiguration';
 import {
   createJob,
+  deleteJob,
   ensureOrganizationId,
+  getJobOverview,
   getJobPipeline,
   listJobs,
+  updateJob,
+  updateJobCareerPageListing,
   type Job as ApiJob,
   type JobPipeline,
 } from '../../lib/api';
@@ -291,10 +295,15 @@ export default function Dashboard() {
       const orgId = await ensureOrganizationId(organizationId || undefined);
       setOrganizationId(orgId);
 
-      const jobsResponse = await listJobs({ organization: orgId, page_size: 100 });
+      const [jobsResponse, overviewResponse] = await Promise.all([
+        listJobs({ organization: orgId, page_size: 100 }),
+        getJobOverview(orgId).catch(() => null),
+      ]);
+
+      const sourceJobs = overviewResponse?.jobs?.length ? overviewResponse.jobs : jobsResponse.results;
 
       const pipelines = await Promise.all(
-        jobsResponse.results.map((job) =>
+        sourceJobs.map((job) =>
           getJobPipeline(job.id)
             .then((pipeline) => ({ id: job.id, pipeline }))
             .catch(() => ({ id: job.id, pipeline: undefined }))
@@ -303,7 +312,7 @@ export default function Dashboard() {
 
       const pipelineByJob = new Map(pipelines.map((item) => [item.id, item.pipeline]));
       setJobs(
-        jobsResponse.results.map((job) => ({
+        sourceJobs.map((job) => ({
           ...mapApiJob(job, pipelineByJob.get(job.id)),
           listedOnCareerPage: true,
           tags: [],
@@ -368,7 +377,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleEditJobName = (
+  const handleEditJobName = async (
     jobId: string,
     payload: { title: string; jobId?: string; tags: string[] }
   ) => {
@@ -394,11 +403,22 @@ export default function Dashboard() {
         : prev
     );
 
-    toast('Job name updated successfully.', 'success');
+    try {
+      await updateJob(jobId, { title: payload.title });
+      toast('Job name updated successfully.', 'success');
+      await loadJobs();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to update job name.', 'error');
+      await loadJobs();
+    }
   };
 
-  const handleToggleCareerPage = (jobId: string) => {
+  const handleToggleCareerPage = async (jobId: string) => {
     const current = jobs.find((job) => job.id === jobId);
+    if (!current) {
+      return;
+    }
     const nextListed = !(current?.listedOnCareerPage ?? true);
 
     setJobs((prev) =>
@@ -421,79 +441,105 @@ export default function Dashboard() {
         : prev
     );
 
-    toast(
-      nextListed ? 'Job listed on career page.' : 'Job unlisted from career page.',
-      'success'
-    );
-  };
+    try {
+      await updateJobCareerPageListing(jobId, nextListed);
+      toast(
+        nextListed ? 'Job listed on career page.' : 'Job unlisted from career page.',
+        'success'
+      );
+    } catch (error) {
+      console.error(error);
 
-  const handleArchiveJob = (jobId: string) => {
-    setJobs((prev) =>
-      prev.map((job) =>
-        job.id === jobId
+      setJobs((prev) =>
+        prev.map((job) =>
+          job.id === jobId
+            ? {
+                ...job,
+                listedOnCareerPage: !nextListed,
+              }
+            : job
+        )
+      );
+
+      setSelectedJob((prev) =>
+        prev && prev.id === jobId
           ? {
-              ...job,
-              status: 'Archived',
+              ...prev,
+              listedOnCareerPage: !nextListed,
             }
-          : job
-      )
-    );
+          : prev
+      );
 
-    setSelectedJob((prev) =>
-      prev && prev.id === jobId
-        ? {
-            ...prev,
-            status: 'Archived',
-          }
-        : prev
-    );
-
-    toast('Job archived successfully.', 'success');
+      toast('Unable to update career page listing.', 'error');
+    }
   };
 
-  const handleUnarchiveJob = (jobId: string) => {
-    setJobs((prev) =>
-      prev.map((job) =>
-        job.id === jobId
-          ? {
-              ...job,
-              status: 'Draft',
-            }
-          : job
-      )
-    );
-
-    setSelectedJob((prev) =>
-      prev && prev.id === jobId
-        ? {
-            ...prev,
-            status: 'Draft',
-          }
-        : prev
-    );
-
-    toast('Job unarchived successfully.', 'success');
+  const handleArchiveJob = async (jobId: string) => {
+    try {
+      await updateJob(jobId, { status: 'archived' });
+      await loadJobs();
+      toast('Job archived successfully.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to archive job.', 'error');
+    }
   };
 
-  const handleDuplicateJob = (jobId: string) => {
+  const handleUnarchiveJob = async (jobId: string) => {
+    try {
+      await updateJob(jobId, { status: 'draft' });
+      await loadJobs();
+      toast('Job unarchived successfully.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to unarchive job.', 'error');
+    }
+  };
+
+  const handleDuplicateJob = async (jobId: string) => {
     const source = jobs.find((job) => job.id === jobId);
     if (!source) return;
 
-    const duplicate: Job = {
-      ...source,
-      id: `${source.id}-copy-${Date.now()}`,
-      title: `${source.title} (Copy)`,
-      createdDate: new Date().toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      }),
-      status: 'Draft',
-      listedOnCareerPage: false,
-    };
+    const [rolePart = source.title, locationPart = 'Remote'] = source.role
+      .split('•')
+      .map((value) => value.trim())
+      .filter(Boolean);
 
-    setJobs((prev) => [duplicate, ...prev]);
-    toast('Job duplicated successfully.', 'success');
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+
+      await createJob({
+        organization: orgId,
+        title: `${source.title} (Copy)`,
+        role: rolePart,
+        business_unit: rolePart,
+        description: `Duplicate of ${source.title}`,
+        location: locationPart,
+        status: 'draft',
+      });
+
+      await loadJobs();
+      toast('Job duplicated successfully.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to duplicate job.', 'error');
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      await deleteJob(jobId);
+
+      setSelectedJob((prev) => (prev?.id === jobId ? null : prev));
+      setViewMode((prev) => (selectedJob?.id === jobId ? null : prev));
+
+      toast('Job deleted permanently.', 'success');
+      await loadJobs();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to delete job.', 'error');
+    }
   };
 
   const creatorOptions = useMemo(
@@ -662,6 +708,7 @@ export default function Dashboard() {
                       onArchiveJob={() => handleArchiveJob(job.id)}
                       onUnarchiveJob={() => handleUnarchiveJob(job.id)}
                       onDuplicateJob={() => handleDuplicateJob(job.id)}
+                      onDeleteJob={() => handleDeleteJob(job.id)}
                     />
                   </motion.div>
                 ))}

@@ -380,7 +380,10 @@ export function getJob(id: string) {
   return request<Job>(`/jobs/jobs/${id}/`);
 }
 
-export function updateJob(id: string, data: Partial<Pick<Job, 'status' | 'location'>>) {
+export function updateJob(
+  id: string,
+  data: Partial<Pick<Job, 'status' | 'location' | 'title' | 'role' | 'business_unit' | 'description'>>,
+) {
   return request<Job>(`/jobs/jobs/${id}/`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

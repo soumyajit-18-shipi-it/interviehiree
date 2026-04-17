@@ -19,9 +19,21 @@ vi.mock('../../lib/api', () => ({
   }),
   updateOrganization: vi.fn().mockResolvedValue({ id: 'org-1' }),
   updatePreferences: vi.fn().mockResolvedValue({ id: 'pref-1' }),
+  changePassword: vi.fn().mockResolvedValue({ detail: 'Password changed successfully.' }),
+  listOrganizations: vi.fn().mockResolvedValue([
+    {
+      id: 'org-1',
+      name: 'IntervieHire',
+      domain: 'interviehire',
+      contact_email: 'admin@interviehire.ai',
+      location: 'Delhi',
+    },
+  ]),
+  createOrganization: vi.fn().mockResolvedValue({ id: 'org-2' }),
+  deleteOrganization: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { updateOrganization, updatePreferences } from '../../lib/api';
+import { changePassword, updateOrganization, updatePreferences } from '../../lib/api';
 
 describe('SettingsView', () => {
   beforeEach(() => {
@@ -99,6 +111,34 @@ describe('SettingsView', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Unable to save cookie preferences.')).toBeInTheDocument();
+    });
+  });
+
+  it('changes password through API from Security tab', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <ToastProvider>
+        <SettingsView />
+      </ToastProvider>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Security' }));
+
+    const currentPasswordInput = await screen.findByLabelText(/current password/i);
+    const newPasswordInput = await screen.findByLabelText(/^new password$/i);
+    const confirmPasswordInput = await screen.findByLabelText(/confirm new password/i);
+
+    await user.type(currentPasswordInput, 'old-password');
+    await user.type(newPasswordInput, 'new-password-123');
+    await user.type(confirmPasswordInput, 'new-password-123');
+    await user.click(screen.getByRole('button', { name: /update password/i }));
+
+    await waitFor(() => {
+      expect(changePassword).toHaveBeenCalledWith({
+        current_password: 'old-password',
+        new_password: 'new-password-123',
+      });
     });
   });
 });

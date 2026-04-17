@@ -1,5 +1,6 @@
 import {
   ensureOrganizationId,
+  getCandidateResponsesOverview,
   getJob,
   getJobPipeline,
   listApplications,
@@ -351,6 +352,7 @@ function buildInsights(
   analyses: ResumeAnalysis[],
   interviews: Interview[],
   sources: FunnelSource[],
+  responsesOverview: unknown,
 ) {
   const insights: Insight[] = [];
   const totalApplications = applications.length || 1;
@@ -405,7 +407,20 @@ function buildInsights(
     });
   }
 
-  return insights.slice(0, 3);
+  if (responsesOverview && typeof responsesOverview === 'object') {
+    const responseData = responsesOverview as Record<string, unknown>;
+    const responseCount = Number(responseData.total_responses ?? responseData.total ?? NaN);
+
+    if (!Number.isNaN(responseCount) && responseCount > 0) {
+      insights.push({
+        id: 'responses-overview',
+        type: 'success',
+        text: `Response insights are available for ${responseCount} candidate submissions in this job.`,
+      });
+    }
+  }
+
+  return insights.slice(0, 4);
 }
 
 function buildScoreDistribution(analyses: ResumeAnalysis[]) {
@@ -414,13 +429,14 @@ function buildScoreDistribution(analyses: ResumeAnalysis[]) {
 
 export async function loadJobDetailView(job: JobLike): Promise<JobDetailView> {
   const organizationId = job.organization ?? (await ensureOrganizationId().catch(() => ''));
-  const [fullJobResponse, pipeline, applicationsResponse, candidatesResponse, analysesResponse, interviewsResponse] = await Promise.all([
+  const [fullJobResponse, pipeline, applicationsResponse, candidatesResponse, analysesResponse, interviewsResponse, responsesOverview] = await Promise.all([
     getJob(job.id).catch(() => null),
     getJobPipeline(job.id).catch(() => null),
     listApplications({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
     listCandidates({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
     listResumeAnalyses({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
     listInterviews({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
+    getCandidateResponsesOverview(job.id).catch(() => null),
   ]);
 
   const fullJob = fullJobResponse ?? normalizeJob(job, organizationId);
@@ -436,7 +452,7 @@ export async function loadJobDetailView(job: JobLike): Promise<JobDetailView> {
     pipeline,
     funnelStages: buildFunnelStages(pipeline, applications),
     funnelSources,
-    insights: buildInsights(applications, analyses, interviews, funnelSources),
+    insights: buildInsights(applications, analyses, interviews, funnelSources, responsesOverview),
     scoreDistribution: buildScoreDistribution(analyses),
     overview: buildOverviewMetrics(fullJob, applications, interviews),
     resumeCriteria: buildResumeCriteria(fullJob),

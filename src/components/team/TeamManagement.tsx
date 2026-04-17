@@ -22,6 +22,7 @@ import {
   createTeamMember,
   deleteTeamMember,
   ensureOrganizationId,
+  getTeamMember,
   listJobs,
   listTeam,
   updateTeamMember,
@@ -216,15 +217,6 @@ export default function TeamManagement() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [openMenuId]);
-
-  useEffect(() => {
-    if (!editingMember) {
-      return;
-    }
-
-    setEditDesignation(editingMember.role);
-    setEditStatus(editingMember.status);
-  }, [editingMember]);
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) {
@@ -525,9 +517,29 @@ export default function TeamManagement() {
                             <MenuAction
                               icon={Pencil}
                               label="Edit member"
-                              onClick={() => {
+                              onClick={async () => {
                                 setOpenMenuId(null);
-                                setEditingMember(member);
+
+                                try {
+                                  const latest = await getTeamMember(member.id);
+                                  const nextMember = {
+                                    id: latest.id,
+                                    name: latest.display_name || `${latest.first_name} ${latest.last_name}`.trim() || latest.username,
+                                    role: latest.designation,
+                                    type: normalizeUserType(latest.user_type),
+                                    status: normalizeStatus(latest.status),
+                                    email: latest.email,
+                                    assignedJobs: member.assignedJobs,
+                                  };
+                                  setEditDesignation(nextMember.role);
+                                  setEditStatus(nextMember.status);
+                                  setEditingMember(nextMember);
+                                } catch (error) {
+                                  console.error(error);
+                                  setEditDesignation(member.role);
+                                  setEditStatus(member.status);
+                                  setEditingMember(member);
+                                }
                               }}
                             />
                             <MenuAction
@@ -832,7 +844,7 @@ function FilterSelect({
 }: {
   value: string;
   onChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
+  options: ReadonlyArray<{ value: string; label: string }>;
 }) {
   return (
     <div className="relative">
