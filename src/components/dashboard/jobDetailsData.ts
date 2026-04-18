@@ -1,8 +1,11 @@
 import {
   ensureOrganizationId,
+  getApplicationResponsesSummary,
+  getJobAiInsights,
   getCandidateResponsesOverview,
   getJob,
   getJobPipeline,
+  listCandidateResponses,
   listApplications,
   listCandidates,
   listInterviews,
@@ -96,6 +99,13 @@ export interface JobDetailView {
   resumeCriteria: ResumeCriteria;
   screeningCandidates: ScreeningCandidate[];
   functionalCandidates: FunctionalCandidate[];
+  responseHighlights: Array<{
+    applicationId: string;
+    candidateName: string;
+    totalResponses: number;
+    averageScore: number | null;
+    latestResponse: string;
+  }>;
 }
 
 const sourceColors: Record<string, string> = {
@@ -353,6 +363,7 @@ function buildInsights(
   interviews: Interview[],
   sources: FunnelSource[],
   responsesOverview: unknown,
+  aiInsightsPayload: unknown,
 ) {
   const insights: Insight[] = [];
   const totalApplications = applications.length || 1;
@@ -420,7 +431,76 @@ function buildInsights(
     }
   }
 
+  if (Array.isArray(aiInsightsPayload)) {
+    aiInsightsPayload.slice(0, 2).forEach((entry, index) => {
+      if (!entry || typeof entry !== 'object') {
+        return;
+      }
+
+      const data = entry as Record<string, unknown>;
+      const rawText =
+        typeof data.insight === 'string'
+          ? data.insight
+          : typeof data.title === 'string'
+            ? data.title
+            : '';
+
+      if (!rawText.trim()) {
+        return;
+      }
+
+      const typeValue = typeof data.type === 'string' ? data.type.toLowerCase() : '';
+      const type: Insight['type'] = typeValue === 'warning'
+        ? 'warning'
+        : typeValue === 'success'
+          ? 'success'
+          : 'recommendation';
+
+      insights.push({
+        id: `ai-insight-${index}`,
+        type,
+        text: rawText,
+      });
+    });
+  }
+
   return insights.slice(0, 4);
+}
+
+async function buildResponseHighlights(
+  applications: Application[],
+  candidatesById: Map<string, Candidate>,
+) {
+  const targets = applications.slice(0, 8);
+
+  const rows = await Promise.all(
+    targets.map(async (application) => {
+      try {
+        const [summary, responses] = await Promise.all([
+          getApplicationResponsesSummary(application.id).catch(() => null),
+          listCandidateResponses(application.id, { page_size: 5 }).catch(() => null),
+        ]);
+
+        const candidate = candidatesById.get(application.candidate);
+        const totalResponses = Number(summary?.total_responses ?? responses?.count ?? 0);
+        const averageScore = typeof summary?.average_score === 'number' ? summary.average_score : null;
+        const latestResponse = responses?.results?.[0]?.response_text?.trim() || 'No response captured yet.';
+
+        return {
+          applicationId: application.id,
+          candidateName: candidate?.full_name || application.candidate_name || 'Unknown Candidate',
+          totalResponses,
+          averageScore,
+          latestResponse,
+        };
+      } catch (error) {
+        console.error(error);
+        return null;
+      }
+    }),
+  );
+
+  return rows.filter((item): item is NonNullable<typeof item> => Boolean(item));
 }
 
 function buildScoreDistribution(analyses: ResumeAnalysis[]) {
@@ -429,7 +509,7 @@ function buildScoreDistribution(analyses: ResumeAnalysis[]) {
 
 export async function loadJobDetailView(job: JobLike): Promise<JobDetailView> {
   const organizationId = job.organization ?? (await ensureOrganizationId().catch(() => ''));
-  const [fullJobResponse, pipeline, applicationsResponse, candidatesResponse, analysesResponse, interviewsResponse, responsesOverview] = await Promise.all([
+  const [fullJobResponse, pipeline, applicationsResponse, candidatesResponse, analysesResponse, interviewsResponse, responsesOverview, aiInsightsPayload] = await Promise.all([
     getJob(job.id).catch(() => null),
     getJobPipeline(job.id).catch(() => null),
     listApplications({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
@@ -437,6 +517,7 @@ export async function loadJobDetailView(job: JobLike): Promise<JobDetailView> {
     listResumeAnalyses({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
     listInterviews({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
     getCandidateResponsesOverview(job.id).catch(() => null),
+    getJobAiInsights(job.id).catch(() => null),
   ]);
 
   const fullJob = fullJobResponse ?? normalizeJob(job, organizationId);
@@ -446,17 +527,20 @@ export async function loadJobDetailView(job: JobLike): Promise<JobDetailView> {
   const analyses = analysesResponse.results;
   const interviews = interviewsResponse.results;
   const funnelSources = buildSourceBreakdown(applications);
+  const candidateById = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+  const responseHighlights = await buildResponseHighlights(applications, candidateById);
 
   return {
     job: fullJob,
     pipeline,
     funnelStages: buildFunnelStages(pipeline, applications),
     funnelSources,
-    insights: buildInsights(applications, analyses, interviews, funnelSources, responsesOverview),
+    insights: buildInsights(applications, analyses, interviews, funnelSources, responsesOverview, aiInsightsPayload),
     scoreDistribution: buildScoreDistribution(analyses),
     overview: buildOverviewMetrics(fullJob, applications, interviews),
     resumeCriteria: buildResumeCriteria(fullJob),
     screeningCandidates: buildScreeningCandidates(applications, candidates, analyses),
     functionalCandidates: buildFunctionalCandidates(applications, candidates, interviews),
+    responseHighlights,
   };
 }

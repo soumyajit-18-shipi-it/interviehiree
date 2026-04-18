@@ -87,6 +87,44 @@ export interface JobPipeline {
   qualified: number;
 }
 
+export interface ResumeConfiguration {
+  min_experience_years?: number;
+  required_skills?: string[];
+  preferred_skills?: string[];
+  auto_reject_keywords?: string[];
+}
+
+export interface ScreeningConfiguration {
+  passing_score?: number;
+  duration_minutes?: number;
+  screening_questions?: string[];
+}
+
+export interface InterviewQuestion {
+  id: UUID;
+  question_text: string;
+  question_type: string;
+  duration_minutes: number;
+  order: number;
+  is_mandatory: boolean;
+}
+
+export interface JobCollaborator {
+  id: UUID;
+  user?: UUID;
+  role: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface JobAiInsight {
+  id?: string;
+  title?: string;
+  insight?: string;
+  type?: 'warning' | 'recommendation' | 'success';
+  [key: string]: unknown;
+}
+
 export interface Candidate {
   id: UUID;
   organization: UUID;
@@ -120,6 +158,24 @@ export interface Interview {
   link: string;
   notes: string;
   created_at: string;
+}
+
+export interface CandidateResponse {
+  id: UUID;
+  interview_question: UUID;
+  response_text?: string;
+  response_file?: string | null;
+  video_url?: string | null;
+  submitted_at?: string;
+  score?: number | null;
+  feedback?: string;
+}
+
+export interface ApplicationResponsesSummary {
+  total_responses?: number;
+  completed_responses?: number;
+  average_score?: number;
+  [key: string]: unknown;
 }
 
 export interface Application {
@@ -159,6 +215,16 @@ export interface CareerPageDetails {
   organization?: UUID;
   is_live?: boolean;
   brand_color?: string;
+}
+
+export interface CareerPageMedia {
+  id: UUID;
+  media_type: string;
+  title: string;
+  media_file?: string | null;
+  alt_text?: string;
+  order?: number;
+  is_active?: boolean;
 }
 
 class ApiError extends Error {
@@ -411,6 +477,97 @@ export function getJobPipeline(jobId: string) {
   return request<JobPipeline>(`/jobs/jobs/${jobId}/pipeline/`);
 }
 
+export function getResumeConfiguration(jobId: string) {
+  return request<ResumeConfiguration>(`/jobs/jobs/${jobId}/resume-configuration/`);
+}
+
+export function updateResumeConfiguration(jobId: string, data: ResumeConfiguration) {
+  return request<ResumeConfiguration>(`/jobs/jobs/${jobId}/resume-configuration/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function getScreeningConfiguration(jobId: string) {
+  return request<ScreeningConfiguration>(`/jobs/jobs/${jobId}/screening-configuration/`);
+}
+
+export function updateScreeningConfiguration(jobId: string, data: ScreeningConfiguration) {
+  return request<ScreeningConfiguration>(`/jobs/jobs/${jobId}/screening-configuration/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function listInterviewQuestions(jobId: string, params?: { page?: number; page_size?: number }) {
+  return request<PaginatedResponse<InterviewQuestion>>(`/jobs/jobs/${jobId}/interview-questions/${toQuery(params)}`);
+}
+
+export function createInterviewQuestion(
+  jobId: string,
+  data: Pick<InterviewQuestion, 'question_text' | 'question_type' | 'duration_minutes' | 'order' | 'is_mandatory'>,
+) {
+  return request<InterviewQuestion>(`/jobs/jobs/${jobId}/interview-questions/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function getInterviewQuestion(jobId: string, questionId: string) {
+  return request<InterviewQuestion>(`/jobs/jobs/${jobId}/interview-questions/${questionId}/`);
+}
+
+export function updateInterviewQuestion(
+  jobId: string,
+  questionId: string,
+  data: Partial<Pick<InterviewQuestion, 'question_text' | 'question_type' | 'duration_minutes' | 'order' | 'is_mandatory'>>,
+) {
+  return request<InterviewQuestion>(`/jobs/jobs/${jobId}/interview-questions/${questionId}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteInterviewQuestion(jobId: string, questionId: string) {
+  return request<void>(`/jobs/jobs/${jobId}/interview-questions/${questionId}/`, {
+    method: 'DELETE',
+  });
+}
+
+export function getJobAiInsights(jobId: string) {
+  return request<JobAiInsight[] | Record<string, unknown>>(`/jobs/jobs/${jobId}/ai-insights/`);
+}
+
+export function listJobCollaborators(jobId: string, params?: { page?: number; page_size?: number }) {
+  return request<PaginatedResponse<JobCollaborator>>(`/jobs/jobs/${jobId}/collaborators/${toQuery(params)}`);
+}
+
+export function addJobCollaborator(jobId: string, data: { user: string; role: string }) {
+  return request<JobCollaborator>(`/jobs/jobs/${jobId}/collaborators/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function updateJobCollaboratorRole(jobId: string, collaboratorId: string, data: { role: string }) {
+  return request<JobCollaborator>(`/jobs/jobs/${jobId}/collaborators/${collaboratorId}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function removeJobCollaborator(jobId: string, collaboratorId: string) {
+  return request<void>(`/jobs/jobs/${jobId}/collaborators/${collaboratorId}/`, {
+    method: 'DELETE',
+  });
+}
+
 // Candidates
 export function listCandidates(params: {
   organization: string;
@@ -573,6 +730,53 @@ export function getCandidateUsageOverview(organization: string) {
   return request<unknown>(`/candidates/usage/overview/${toQuery({ organization })}`);
 }
 
+export function listCandidateResponses(applicationId: string, params?: { page?: number; page_size?: number }) {
+  return request<PaginatedResponse<CandidateResponse>>(`/candidates/applications/${applicationId}/responses/${toQuery(params)}`);
+}
+
+export function createCandidateResponse(
+  applicationId: string,
+  data: {
+    interview_question: string;
+    response_text?: string;
+    response_file?: string | null;
+    video_url?: string | null;
+    submitted_at?: string;
+  },
+) {
+  return request<CandidateResponse>(`/candidates/applications/${applicationId}/responses/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function getCandidateResponse(applicationId: string, responseId: string) {
+  return request<CandidateResponse>(`/candidates/applications/${applicationId}/responses/${responseId}/`);
+}
+
+export function updateCandidateResponse(
+  applicationId: string,
+  responseId: string,
+  data: Partial<Pick<CandidateResponse, 'score' | 'feedback' | 'response_text'>>,
+) {
+  return request<CandidateResponse>(`/candidates/applications/${applicationId}/responses/${responseId}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCandidateResponse(applicationId: string, responseId: string) {
+  return request<void>(`/candidates/applications/${applicationId}/responses/${responseId}/`, {
+    method: 'DELETE',
+  });
+}
+
+export function getApplicationResponsesSummary(applicationId: string) {
+  return request<ApplicationResponsesSummary>(`/candidates/applications/${applicationId}/responses/summary/`);
+}
+
 // Career pages
 export function getCareerPageSetup(organization: string) {
   return request<CareerPageSetup>(`/career-pages/career-page/setup/${toQuery({ organization })}`);
@@ -618,4 +822,61 @@ export function getCareerPageJobs(params: {
 }) {
   const { slug, ...query } = params;
   return request<PaginatedResponse<Job>>(`/career-pages/career-page/${slug}/jobs/${toQuery(query)}`);
+}
+
+export function listCareerPageMedia(slug: string, params?: { page?: number; page_size?: number }) {
+  return request<PaginatedResponse<CareerPageMedia>>(`/career-pages/career-page/${slug}/media/${toQuery(params)}`);
+}
+
+export function uploadCareerPageMedia(
+  slug: string,
+  data: {
+    media_type: string;
+    title: string;
+    media_file: File;
+    alt_text?: string;
+    order?: number;
+    is_active?: boolean;
+  },
+) {
+  const body = new FormData();
+  body.append('media_type', data.media_type);
+  body.append('title', data.title);
+  body.append('media_file', data.media_file);
+  if (data.alt_text !== undefined) {
+    body.append('alt_text', data.alt_text);
+  }
+  if (data.order !== undefined) {
+    body.append('order', String(data.order));
+  }
+  if (data.is_active !== undefined) {
+    body.append('is_active', String(data.is_active));
+  }
+
+  return request<CareerPageMedia>(`/career-pages/career-page/${slug}/media/`, {
+    method: 'POST',
+    body,
+  });
+}
+
+export function getCareerPageMediaDetail(slug: string, mediaId: string) {
+  return request<CareerPageMedia>(`/career-pages/career-page/${slug}/media/${mediaId}/`);
+}
+
+export function updateCareerPageMedia(
+  slug: string,
+  mediaId: string,
+  data: Partial<Pick<CareerPageMedia, 'title' | 'alt_text' | 'order' | 'is_active'>>,
+) {
+  return request<CareerPageMedia>(`/career-pages/career-page/${slug}/media/${mediaId}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export function deleteCareerPageMedia(slug: string, mediaId: string) {
+  return request<void>(`/career-pages/career-page/${slug}/media/${mediaId}/`, {
+    method: 'DELETE',
+  });
 }

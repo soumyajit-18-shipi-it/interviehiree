@@ -1,11 +1,32 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, ChevronRight, Plus, Info, Globe, FileText, Video, Briefcase,
+  ArrowLeft, ChevronRight, Plus, Info, Globe, FileText, Video, Briefcase, X,
   Check, AlertTriangle, Star, Clock, Zap, Trash2, GripVertical
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { ensureOrganizationId, getCareerPageJobs, getCareerPageSetup, updateJobCareerPageListing } from '../../lib/api';
+import {
+  addJobCollaborator,
+  createInterviewQuestion,
+  deleteInterviewQuestion,
+  ensureOrganizationId,
+  getCareerPageJobs,
+  getCareerPageSetup,
+  getResumeConfiguration,
+  getScreeningConfiguration,
+  listInterviewQuestions,
+  listJobCollaborators,
+  listTeam,
+  removeJobCollaborator,
+  type InterviewQuestion as ApiInterviewQuestion,
+  type JobCollaborator,
+  type TeamMember,
+  updateInterviewQuestion,
+  updateJobCareerPageListing,
+  updateJobCollaboratorRole,
+  updateResumeConfiguration,
+  updateScreeningConfiguration,
+} from '../../lib/api';
 import { useToast } from '../ui/Toast';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -31,21 +52,30 @@ interface InterviewQuestion {
   duration: number;
 }
 
+function normalizeTeamResponse(team: TeamMember[] | { results: TeamMember[] }) {
+  return Array.isArray(team) ? team : team.results;
+}
+
+function normalizeRole(value: string) {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 // ─── Resume Analysis Panel ────────────────────────────────────────────────
-function ResumePanel() {
+function ResumePanel({ jobId }: { jobId: string }) {
+  const { toast } = useToast();
   const [config, setConfig] = useState<ResumeConfig>({
-    mustHave: [
-      { id: 'm1', text: '5+ years of UX/Product Design experience' },
-    ],
-    redFlags: [
-      { id: 'r1', text: 'No portfolio or case studies' },
-    ],
-    goodToHave: [
-      { id: 'g1', text: 'Experience with Figma and design systems' },
-    ],
+    mustHave: [],
+    redFlags: [],
+    goodToHave: [],
   });
   const [newText, setNewText] = useState<Record<string, string>>({ mustHave: '', redFlags: '', goodToHave: '' });
   const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const sections: { key: keyof ResumeConfig; label: string; icon: any; color: string }[] = [
     { key: 'mustHave', label: 'Must Have', icon: Check, color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
@@ -64,9 +94,71 @@ function ResumePanel() {
     setConfig(prev => ({ ...prev, [key]: prev[key].filter(i => i.id !== id) }));
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadConfig = async () => {
+      setIsLoading(true);
+      try {
+        const response = await getResumeConfiguration(jobId);
+        if (cancelled) {
+          return;
+        }
+
+        const nextConfig: ResumeConfig = {
+          mustHave: (response.required_skills ?? []).map((text, index) => ({
+            id: `must-${index}-${text}`,
+            text,
+          })),
+          redFlags: (response.auto_reject_keywords ?? []).map((text, index) => ({
+            id: `flag-${index}-${text}`,
+            text,
+          })),
+          goodToHave: (response.preferred_skills ?? []).map((text, index) => ({
+            id: `good-${index}-${text}`,
+            text,
+          })),
+        };
+
+        setConfig(nextConfig);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  const handleSave = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateResumeConfiguration(jobId, {
+        required_skills: config.mustHave.map((item) => item.text.trim()).filter(Boolean),
+        auto_reject_keywords: config.redFlags.map((item) => item.text.trim()).filter(Boolean),
+        preferred_skills: config.goodToHave.map((item) => item.text.trim()).filter(Boolean),
+      });
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast('Resume configuration updated.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to save resume configuration.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -78,6 +170,11 @@ function ResumePanel() {
         <p className="text-sm text-muted-foreground mt-1">Define the criteria our AI will use to evaluate and score resumes.</p>
       </div>
 
+      {isLoading ? (
+        <div className="rounded-2xl border border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+          Loading resume configuration...
+        </div>
+      ) : (
       <div className="grid grid-cols-1 gap-5">
         {sections.map(({ key, label, icon: Icon, color }) => (
           <div key={key} className="border border-border rounded-2xl overflow-hidden">
@@ -119,16 +216,18 @@ function ResumePanel() {
           </div>
         ))}
       </div>
+      )}
 
       <div className="flex justify-end pt-2">
         <button
           onClick={handleSave}
+          disabled={isSaving}
           className={clsx(
             'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
             saved ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'
           )}
         >
-          {saved ? <><Check size={15} /> Saved!</> : 'Save Criteria'}
+          {saved ? <><Check size={15} /> Saved!</> : isSaving ? 'Saving...' : 'Save Criteria'}
         </button>
       </div>
     </div>
@@ -136,7 +235,8 @@ function ResumePanel() {
 }
 
 // ─── Recruiter Screening Panel ────────────────────────────────────────────
-function ScreeningPanel() {
+function ScreeningPanel({ jobId }: { jobId: string }) {
+  const { toast } = useToast();
   const [params, setParams] = useState<ScreeningParam[]>([
     { id: '1', label: 'Communication Skills', weight: 25, enabled: true },
     { id: '2', label: 'Technical Knowledge', weight: 30, enabled: true },
@@ -146,6 +246,8 @@ function ScreeningPanel() {
   ]);
   const [duration, setDuration] = useState([5, 10]);
   const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const totalWeight = params.filter(p => p.enabled).reduce((a, p) => a + p.weight, 0);
 
@@ -157,6 +259,75 @@ function ScreeningPanel() {
     setParams(prev => prev.map(p => p.id === id ? { ...p, enabled: !p.enabled } : p));
   };
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadConfig = async () => {
+      setIsLoading(true);
+      try {
+        const response = await getScreeningConfiguration(jobId);
+
+        if (cancelled) {
+          return;
+        }
+
+        const questions = response.screening_questions ?? [];
+        if (questions.length > 0) {
+          const evenWeight = Math.max(1, Math.floor(100 / questions.length));
+          setParams(
+            questions.map((question, index) => ({
+              id: String(index + 1),
+              label: question,
+              weight: evenWeight,
+              enabled: true,
+            })),
+          );
+        }
+
+        if (typeof response.duration_minutes === 'number' && response.duration_minutes > 0) {
+          const half = Math.max(1, Math.floor(response.duration_minutes / 2));
+          setDuration([half, Math.max(half + 1, response.duration_minutes)]);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadConfig();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  const handleSave = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateScreeningConfiguration(jobId, {
+        passing_score: Math.max(50, Math.min(100, totalWeight)),
+        duration_minutes: duration[1],
+        screening_questions: params.filter((item) => item.enabled).map((item) => item.label),
+      });
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast('Screening configuration updated.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to save screening configuration.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -166,6 +337,12 @@ function ScreeningPanel() {
         <p className="text-sm text-muted-foreground mt-1">Configure the parameters and weights for automated recruiter screening.</p>
       </div>
 
+      {isLoading ? (
+        <div className="rounded-2xl border border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+          Loading screening configuration...
+        </div>
+      ) : (
+      <>
       {/* Duration */}
       <div className="p-4 bg-primary/5 border border-primary/15 rounded-2xl flex items-center gap-4">
         <Clock size={18} className="text-primary flex-shrink-0" />
@@ -238,16 +415,19 @@ function ScreeningPanel() {
           </div>
         ))}
       </div>
+      </>
+      )}
 
       <div className="flex justify-end pt-2">
         <button
-          onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }}
+          onClick={handleSave}
+          disabled={isSaving}
           className={clsx(
             'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
             saved ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'
           )}
         >
-          {saved ? <><Check size={15} /> Saved!</> : 'Save Parameters'}
+          {saved ? <><Check size={15} /> Saved!</> : isSaving ? 'Saving...' : 'Save Parameters'}
         </button>
       </div>
     </div>
@@ -255,28 +435,150 @@ function ScreeningPanel() {
 }
 
 // ─── Functional Interview Panel ────────────────────────────────────────────
-function InterviewPanel() {
+function InterviewPanel({ jobId }: { jobId: string }) {
+  const { toast } = useToast();
   const competencies = ['Problem Solving', 'Communication', 'Leadership', 'Technical', 'Adaptability'];
 
-  const [questions, setQuestions] = useState<InterviewQuestion[]>([
-    { id: '1', question: 'Walk me through your design process for a complex product.', competency: 'Communication', duration: 3 },
-    { id: '2', question: 'Describe a time you turned user research into a product decision.', competency: 'Problem Solving', duration: 3 },
-    { id: '3', question: 'How do you handle stakeholder disagreements on design direction?', competency: 'Leadership', duration: 2 },
-    { id: '4', question: 'Tell me about a time you designed under tight constraints.', competency: 'Adaptability', duration: 2 },
-    { id: '5', question: 'What metrics do you use to measure design success?', competency: 'Technical', duration: 2 },
-  ]);
+  const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [newQ, setNewQ] = useState({ question: '', competency: 'Problem Solving', duration: 2 });
   const [saved, setSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const toCompetency = (question: ApiInterviewQuestion) => {
+    const text = `${question.question_type} ${question.question_text}`.toLowerCase();
+    if (text.includes('lead')) return 'Leadership';
+    if (text.includes('communic')) return 'Communication';
+    if (text.includes('adapt')) return 'Adaptability';
+    if (text.includes('problem')) return 'Problem Solving';
+    return 'Technical';
+  };
+
+  const toQuestionType = (competency: string) => {
+    switch (competency) {
+      case 'Communication':
+        return 'communication';
+      case 'Leadership':
+        return 'leadership';
+      case 'Adaptability':
+        return 'adaptability';
+      case 'Problem Solving':
+        return 'problem_solving';
+      default:
+        return 'technical';
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadQuestions = async () => {
+      setIsLoading(true);
+      try {
+        const response = await listInterviewQuestions(jobId, { page_size: 200 });
+        if (cancelled) {
+          return;
+        }
+
+        const mapped = response.results
+          .sort((left, right) => left.order - right.order)
+          .map((question) => ({
+            id: question.id,
+            question: question.question_text,
+            competency: toCompetency(question),
+            duration: question.duration_minutes,
+          }));
+
+        setQuestions(mapped);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void loadQuestions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
 
   const totalDuration = questions.reduce((a, q) => a + q.duration, 0);
   const competencyCounts = competencies.map(c => ({ name: c, count: questions.filter(q => q.competency === c).length }));
 
-  const addQuestion = () => {
+  const addQuestion = async () => {
     if (!newQ.question.trim()) return;
-    setQuestions(prev => [...prev, { ...newQ, id: Date.now().toString() }]);
-    setNewQ({ question: '', competency: 'Problem Solving', duration: 2 });
-    setIsAdding(false);
+
+    try {
+      const created = await createInterviewQuestion(jobId, {
+        question_text: newQ.question.trim(),
+        question_type: toQuestionType(newQ.competency),
+        duration_minutes: newQ.duration,
+        order: questions.length + 1,
+        is_mandatory: true,
+      });
+
+      setQuestions(prev => [
+        ...prev,
+        {
+          id: created.id,
+          question: created.question_text,
+          competency: toCompetency(created),
+          duration: created.duration_minutes,
+        },
+      ]);
+      setNewQ({ question: '', competency: 'Problem Solving', duration: 2 });
+      setIsAdding(false);
+      toast('Interview question added.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to add interview question.', 'error');
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    try {
+      await deleteInterviewQuestion(jobId, questionId);
+      setQuestions(prev => prev.filter(question => question.id !== questionId));
+      toast('Interview question removed.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to remove interview question.', 'error');
+    }
+  };
+
+  const handleSave = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await Promise.all(
+        questions.map((question, index) =>
+          updateInterviewQuestion(jobId, question.id, {
+            question_text: question.question,
+            question_type: toQuestionType(question.competency),
+            duration_minutes: question.duration,
+            order: index + 1,
+            is_mandatory: true,
+          }),
+        ),
+      );
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      toast('Interview questions updated.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to save interview questions.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -288,6 +590,12 @@ function InterviewPanel() {
         <p className="text-sm text-muted-foreground mt-1">Manage interview questions, competencies and timing.</p>
       </div>
 
+      {isLoading ? (
+        <div className="rounded-2xl border border-border bg-muted/30 px-4 py-8 text-center text-sm text-muted-foreground">
+          Loading interview questions...
+        </div>
+      ) : (
+      <>
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-3">
         <div className="p-4 bg-primary/5 border border-primary/15 rounded-2xl text-center">
@@ -342,7 +650,7 @@ function InterviewPanel() {
                 </div>
               </div>
               <button
-                onClick={() => setQuestions(prev => prev.filter(x => x.id !== q.id))}
+                onClick={() => void handleDeleteQuestion(q.id)}
                 className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-danger p-1 rounded-lg hover:bg-danger/10 transition-all flex-shrink-0"
               >
                 <Trash2 size={14} />
@@ -408,19 +716,237 @@ function InterviewPanel() {
           </button>
         )}
       </AnimatePresence>
+      </>
+      )}
 
       <div className="flex justify-end pt-2">
         <button
-          onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }}
+          onClick={handleSave}
+          disabled={isSaving}
           className={clsx(
             'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
             saved ? 'bg-emerald-600 text-white' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'
           )}
         >
-          {saved ? <><Check size={15} /> Saved!</> : 'Save Questions'}
+          {saved ? <><Check size={15} /> Saved!</> : isSaving ? 'Saving...' : 'Save Questions'}
         </button>
       </div>
     </div>
+  );
+}
+
+function CollaboratorModal({
+  isOpen,
+  onClose,
+  jobId,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  jobId: string;
+}) {
+  const { toast } = useToast();
+  const [organizationId, setOrganizationId] = useState('');
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [collaborators, setCollaborators] = useState<JobCollaborator[]>([]);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [role, setRole] = useState('editor');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const orgId = await ensureOrganizationId(organizationId || undefined);
+      setOrganizationId(orgId);
+
+      const [teamResponse, collaboratorsResponse] = await Promise.all([
+        listTeam({ organization: orgId, page_size: 200 }),
+        listJobCollaborators(jobId, { page_size: 200 }),
+      ]);
+
+      setTeamMembers(normalizeTeamResponse(teamResponse));
+      setCollaborators(collaboratorsResponse.results);
+    } catch (error) {
+      console.error(error);
+      toast('Unable to load collaborators.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    void loadData();
+  }, [isOpen, jobId]);
+
+  const handleAdd = async () => {
+    if (!selectedUser || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await addJobCollaborator(jobId, { user: selectedUser, role });
+      toast('Collaborator added.', 'success');
+      setSelectedUser('');
+      await loadData();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to add collaborator.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRoleUpdate = async (collaboratorId: string, nextRole: string) => {
+    try {
+      await updateJobCollaboratorRole(jobId, collaboratorId, { role: nextRole });
+      setCollaborators((prev) =>
+        prev.map((item) => (item.id === collaboratorId ? { ...item, role: nextRole } : item)),
+      );
+      toast('Collaborator role updated.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to update collaborator role.', 'error');
+    }
+  };
+
+  const handleRemove = async (collaboratorId: string) => {
+    try {
+      await removeJobCollaborator(jobId, collaboratorId);
+      setCollaborators((prev) => prev.filter((item) => item.id !== collaboratorId));
+      toast('Collaborator removed.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to remove collaborator.', 'error');
+    }
+  };
+
+  const getDisplayName = (collaborator: JobCollaborator) => {
+    const userValue = collaborator.user !== undefined ? String(collaborator.user) : '';
+    const member = teamMembers.find((item) => String(item.user ?? item.id) === userValue || item.id === userValue);
+    if (!member) {
+      return userValue ? `User ${userValue}` : 'Unknown user';
+    }
+    return member.display_name || `${member.first_name} ${member.last_name}`.trim() || member.username;
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen ? (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              onClose();
+            }
+          }}
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            className="bg-card rounded-3xl w-full max-w-2xl border border-border shadow-2xl flex flex-col max-h-[90vh]"
+          >
+            <div className="p-5 border-b border-border flex items-center justify-between">
+              <h3 className="font-bold text-lg text-foreground">Job Collaborators</h3>
+              <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 overflow-y-auto">
+              <div className="p-4 border border-border rounded-2xl bg-muted/20 space-y-3">
+                <h4 className="text-sm font-bold text-foreground">Add Collaborator</h4>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <select
+                    value={selectedUser}
+                    onChange={(event) => setSelectedUser(event.target.value)}
+                    className="px-3 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="">Select team member</option>
+                    {teamMembers.map((member) => {
+                      const value = String(member.user ?? member.id);
+                      const label = member.display_name || `${member.first_name} ${member.last_name}`.trim() || member.username;
+                      return (
+                        <option key={value} value={value}>
+                          {label} ({member.email})
+                        </option>
+                      );
+                    })}
+                  </select>
+
+                  <select
+                    value={role}
+                    onChange={(event) => setRole(event.target.value)}
+                    className="px-3 py-2 bg-background border border-border rounded-xl text-sm focus:outline-none focus:border-primary"
+                  >
+                    <option value="viewer">Viewer</option>
+                    <option value="editor">Editor</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => void handleAdd()}
+                    disabled={!selectedUser || isSubmitting}
+                    className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                  >
+                    {isSubmitting ? 'Adding...' : 'Add Collaborator'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-bold text-foreground">Current Collaborators</h4>
+                {isLoading ? (
+                  <div className="px-4 py-8 rounded-2xl border border-border bg-muted/20 text-sm text-muted-foreground text-center">
+                    Loading collaborators...
+                  </div>
+                ) : collaborators.length === 0 ? (
+                  <div className="px-4 py-8 rounded-2xl border border-border bg-muted/20 text-sm text-muted-foreground text-center">
+                    No collaborators added yet.
+                  </div>
+                ) : (
+                  collaborators.map((collaborator) => (
+                    <div key={collaborator.id} className="p-3 rounded-xl border border-border bg-card flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{getDisplayName(collaborator)}</p>
+                        <p className="text-xs text-muted-foreground">Role: {normalizeRole(collaborator.role)}</p>
+                      </div>
+
+                      <select
+                        value={collaborator.role}
+                        onChange={(event) => void handleRoleUpdate(collaborator.id, event.target.value)}
+                        className="px-2 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:border-primary"
+                      >
+                        <option value="viewer">Viewer</option>
+                        <option value="editor">Editor</option>
+                        <option value="admin">Admin</option>
+                      </select>
+
+                      <button
+                        onClick={() => void handleRemove(collaborator.id)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold text-danger bg-danger/10 border border-danger/20 hover:bg-danger/20 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -607,6 +1133,7 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
     { id: 'functional', name: '4 · Functional Interview', shortName: 'Functional Interview', details: '5 Questions · ⏱ 12 Minutes · ⚡ 5 Competency', enabled: true, icon: Briefcase },
   ]);
   const [activeStage, setActiveStage] = useState<string>('career');
+  const [isCollaboratorModalOpen, setIsCollaboratorModalOpen] = useState(false);
 
   const toggleStage = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -616,9 +1143,9 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
   const renderRightPanel = () => {
     switch (activeStage) {
       case 'career': return <CareerPagePanel job={job} />;
-      case 'resume': return <ResumePanel />;
-      case 'screening': return <ScreeningPanel />;
-      case 'functional': return <InterviewPanel />;
+      case 'resume': return <ResumePanel jobId={job.id} />;
+      case 'screening': return <ScreeningPanel jobId={job.id} />;
+      case 'functional': return <InterviewPanel jobId={job.id} />;
       default: return null;
     }
   };
@@ -646,7 +1173,10 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-1.5 border border-primary/20 bg-card text-primary rounded-lg text-xs font-bold hover:bg-muted transition-all">
+          <button
+            onClick={() => setIsCollaboratorModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-1.5 border border-primary/20 bg-card text-primary rounded-lg text-xs font-bold hover:bg-muted transition-all"
+          >
             Add Collaborator
           </button>
           <button
@@ -751,6 +1281,12 @@ export default function JobConfiguration({ job, onBack, onViewResponses }: any) 
 
         </div>
       </div>
+
+      <CollaboratorModal
+        isOpen={isCollaboratorModalOpen}
+        onClose={() => setIsCollaboratorModalOpen(false)}
+        jobId={job.id}
+      />
     </div>
   );
 }

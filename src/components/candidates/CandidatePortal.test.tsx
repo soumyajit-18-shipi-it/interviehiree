@@ -9,6 +9,7 @@ vi.mock('../../lib/api', () => ({
     slug: 'careers',
     headline: 'Join our engineering team',
     subheadline: 'Build reliable APIs with us.',
+    brand_color: '#1258F6',
   }),
   getCareerPageJobs: vi.fn().mockResolvedValue({
     count: 1,
@@ -29,7 +30,7 @@ vi.mock('../../lib/api', () => ({
 
 describe('CandidatePortal', () => {
   it('loads jobs from career page APIs', async () => {
-    render(
+    const { container } = render(
       <ToastProvider>
         <CandidatePortal />
       </ToastProvider>
@@ -39,5 +40,7 @@ describe('CandidatePortal', () => {
       expect(screen.getByText('Backend Engineer')).toBeInTheDocument();
       expect(screen.getByText('Build APIs')).toBeInTheDocument();
     });
+
+    expect(container.firstElementChild).toHaveAttribute('style', expect.stringContaining('--primary: #1258F6'));
   });
 });

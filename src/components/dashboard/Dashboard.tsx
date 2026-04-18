@@ -285,7 +285,7 @@ export default function Dashboard() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [viewMode, setViewMode] = useState<'config' | 'responses' | null>(null);
   const [initialTab, setInitialTab] = useState<
-    'Overview' | 'Resume Analysis' | 'Recruiter Screening' | 'Functional Interview'
+    'Overview' | 'Resume Analysis' | 'Recruiter Screening' | 'Functional Interview' | 'Candidate Responses'
   >('Overview');
   const [isLoading, setIsLoading] = useState(false);
   const [isNewJobModalOpen, setIsNewJobModalOpen] = useState(false);
@@ -591,7 +591,10 @@ export default function Dashboard() {
                 setSelectedJob(null);
                 setViewMode(null);
               }}
-              onViewResponses={() => setViewMode('responses')}
+              onViewResponses={() => {
+                setInitialTab('Candidate Responses');
+                setViewMode('responses');
+              }}
             />
           ) : (
             <JobDetails

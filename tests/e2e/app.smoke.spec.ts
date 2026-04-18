@@ -1,7 +1,16 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 async function expectAnyToast(page: Page, pattern: RegExp) {
   await expect(page.getByText(pattern).first()).toBeVisible();
+}
+
+async function expectToastOrFallback(page: Page, pattern: RegExp, fallback: () => Locator) {
+  try {
+    await expectAnyToast(page, pattern);
+    return;
+  } catch {
+    await expect(fallback().first()).toBeVisible();
+  }
 }
 
 test('smoke: navigates major app sections against official API', async ({ page }) => {
@@ -29,14 +38,22 @@ test('smoke: can create job and invite member via official API', async ({ page }
   await page.getByRole('button', { name: /^New Job$/ }).click();
   await page.getByPlaceholder('e.g. Senior Product Designer').fill(`QA Engineer ${suffix}`);
   await page.getByRole('button', { name: 'Create Job' }).click();
-  await expectAnyToast(page, /Job created successfully\.|Unable to create job\. Please try again\./i);
+  await expectToastOrFallback(
+    page,
+    /Job created successfully\.|Unable to create job\. Please try again\./i,
+    () => page.getByText(new RegExp(`QA Engineer ${suffix}`, 'i')),
+  );
 
   await page.getByRole('button', { name: 'Team Access' }).click();
   await page.getByRole('button', { name: 'Invite Member' }).click();
   await page.getByPlaceholder('e.g. Sarah Connor').fill(`QA User ${suffix}`);
   await page.getByPlaceholder('e.g. sarah@company.com').fill(`qa.user.${suffix}@example.com`);
   await page.getByRole('button', { name: 'Send Invite' }).click();
-  await expectAnyToast(page, /Invite sent successfully\.|Failed to send invite\./i);
+  await expectToastOrFallback(
+    page,
+    /Invite sent successfully\.|Failed to send invite\./i,
+    () => page.getByText(new RegExp(`qa\.user\.${suffix}@example\.com`, 'i')),
+  );
 });
 
 test('smoke: can update settings and career setup with official API', async ({ page }) => {

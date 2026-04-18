@@ -4,8 +4,11 @@ import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import {
   createCareerPageSetup,
+  deleteCareerPageMedia,
   ensureOrganizationId,
   getCareerPageSetup,
+  listCareerPageMedia,
+  uploadCareerPageMedia,
   updateCareerPageSetup,
 } from '../../lib/api';
 import { useToast } from '../ui/Toast';
@@ -25,6 +28,33 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
   const [subheadline, setSubheadline] = useState('We are a fast-growing tech startup dedicated to solving hard problems.');
   const [slug, setSlug] = useState('careers');
   const [setupExists, setSetupExists] = useState(false);
+  const [mediaItems, setMediaItems] = useState<Array<{
+    id: string;
+    media_type: string;
+    title: string;
+    media_file?: string | null;
+    alt_text?: string;
+  }>>([]);
+  const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const brandColorPreview = brandColor.trim() || '#6B46FF';
+  const brandColorText = brandColorPreview.toUpperCase();
+
+  const loadMedia = async (nextSlug: string) => {
+    if (!nextSlug.trim()) {
+      setMediaItems([]);
+      return;
+    }
+
+    try {
+      const response = await listCareerPageMedia(nextSlug, { page_size: 100 });
+      setMediaItems(response.results);
+    } catch (error) {
+      console.error(error);
+      setMediaItems([]);
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -41,8 +71,12 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
         setSubheadline(setup.subheadline || subheadline);
         setSlug(setup.slug || slug);
         setSetupExists(true);
+        if (setup.slug) {
+          await loadMedia(setup.slug);
+        }
       } catch {
         setSetupExists(false);
+        setMediaItems([]);
       }
     };
 
@@ -77,11 +111,39 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
           brand_color: brandColor,
         });
       }
+
+      if (selectedLogo) {
+        setIsUploadingLogo(true);
+        await uploadCareerPageMedia(slug.trim(), {
+          media_type: 'logo',
+          title: `${companyName || 'Company'} Logo`,
+          media_file: selectedLogo,
+          alt_text: `${companyName || 'Company'} logo`,
+          order: 0,
+          is_active: true,
+        });
+      }
+
+      await loadMedia(slug.trim());
+      setSelectedLogo(null);
       toast('Career page settings saved.', 'success');
       onClose();
     } catch (error) {
       console.error(error);
       toast('Unable to save career page settings.', 'error');
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleDeleteMedia = async (mediaId: string) => {
+    try {
+      await deleteCareerPageMedia(slug.trim(), mediaId);
+      toast('Career media deleted.', 'success');
+      await loadMedia(slug.trim());
+    } catch (error) {
+      console.error(error);
+      toast('Unable to delete career media.', 'error');
     }
   };
 
@@ -164,32 +226,83 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
             <div className="p-6 overflow-y-auto flex-1 bg-card/50">
               {activeTab === 'Theme' && (
                 <div className="space-y-6 max-w-md mx-auto">
-                  <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/30 hover:border-primary/40 transition-colors cursor-pointer group">
+                  <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/30 hover:border-primary/40 transition-colors cursor-pointer group">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] ?? null;
+                        setSelectedLogo(file);
+                      }}
+                    />
                     <div className="p-4 bg-background rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
                       <Upload size={24} className="text-primary" />
                     </div>
                     <span className="text-sm font-bold text-foreground">Upload Company Logo</span>
                     <span className="text-xs font-medium text-muted-foreground mt-1">PNG, JPG up to 5MB</span>
-                  </div>
+                    {selectedLogo ? (
+                      <span className="mt-2 text-xs font-semibold text-primary">{selectedLogo.name}</span>
+                    ) : null}
+                  </label>
+
+                  {mediaItems.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-foreground uppercase tracking-wider">Uploaded Media</p>
+                      {mediaItems.map((media) => (
+                        <div key={media.id} className="p-3 rounded-xl border border-border bg-background flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{media.title}</p>
+                            <p className="text-xs text-muted-foreground">{media.media_type}</p>
+                          </div>
+                          <button
+                            onClick={() => void handleDeleteMedia(media.id)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-danger bg-danger/10 border border-danger/20 hover:bg-danger/20 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
 
                   <div>
                     <label className="block text-xs font-bold text-foreground mb-2">BRAND COLORS</label>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-3 p-2 border border-border rounded-xl bg-background flex-1">
-                        <div className="w-8 h-8 rounded-lg bg-primary shadow-sm border border-black/10"></div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                      <label className="flex items-center gap-3 p-2 border border-border rounded-xl bg-background flex-1">
+                        <input
+                          type="color"
+                          value={brandColorPreview}
+                          onChange={(e) => setBrandColor(e.target.value)}
+                          className="h-10 w-12 rounded-lg border border-border bg-transparent p-1 cursor-pointer"
+                          aria-label="Brand color picker"
+                        />
                         <input
                           type="text"
-                          value={brandColor}
+                          value={brandColorText}
                           onChange={(e) => setBrandColor(e.target.value)}
                           className="bg-transparent border-none text-sm font-medium focus:outline-none uppercase w-full"
+                          aria-label="Brand color hex value"
                         />
-                      </div>
+                      </label>
                       <button
                         onClick={() => setBrandColor('#6B46FF')}
                         className="px-4 py-3 bg-muted rounded-xl text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Reset
                       </button>
+                    </div>
+                    <div className="mt-3 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
+                      <div
+                        className="w-10 h-10 rounded-xl shadow-sm border border-black/10"
+                        style={{ backgroundColor: brandColorPreview }}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">
+                          Preview
+                        </div>
+                        <div className="text-sm font-semibold text-foreground truncate">{brandColorText}</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -250,12 +363,20 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                     </div>
                     {/* Preview Content */}
                     <div className="p-6 text-center space-y-4">
-                      <div className="w-16 h-16 bg-primary/10 text-primary flex items-center justify-center rounded-2xl mx-auto font-black text-2xl">A</div>
-                      <h4 className="font-black text-xl leading-tight">Join us in building the future.</h4>
-                      <p className="text-xs text-muted-foreground">We are a fast-growing tech startup dedicated to solving hard problems.</p>
+                      <div
+                        className="w-16 h-16 text-white flex items-center justify-center rounded-2xl mx-auto font-black text-2xl shadow-lg"
+                        style={{ backgroundColor: brandColorPreview }}
+                      >
+                        A
+                      </div>
+                      <h4 className="font-black text-xl leading-tight text-foreground">{headline}</h4>
+                      <p className="text-xs text-muted-foreground">{subheadline}</p>
                       
                       <div className="mt-8 space-y-3">
-                        <div className="w-full h-12 bg-muted rounded-xl"></div>
+                        <div
+                          className="w-full h-12 rounded-xl border"
+                          style={{ backgroundColor: `${brandColorPreview}14`, borderColor: `${brandColorPreview}33` }}
+                        />
                         <div className="w-full h-12 bg-muted rounded-xl"></div>
                         <div className="w-full h-12 bg-muted rounded-xl"></div>
                       </div>
@@ -275,9 +396,10 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
               </button>
               <button 
                 onClick={saveSetup}
+                disabled={isUploadingLogo}
                 className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all cursor-pointer"
               >
-                Save Changes
+                {isUploadingLogo ? 'Uploading...' : 'Save Changes'}
               </button>
             </div>
           </motion.div>

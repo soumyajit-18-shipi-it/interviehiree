@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Clock, ArrowRight, CheckCircle2, ChevronLeft } from 'lucide-react';
 import ApplicationForm from './ApplicationForm';
@@ -28,8 +28,10 @@ export default function CandidatePortal() {
   const [organizationId, setOrganizationId] = useState('');
   const [portalHeadline, setPortalHeadline] = useState('Shape the Future of AI.');
   const [portalSubheadline, setPortalSubheadline] = useState("We're building the next generation of recruitment tools. Explore our open positions and start your journey with us.");
+  const [portalBrandColor, setPortalBrandColor] = useState('#6B46FF');
   const [selectedJob, setSelectedJob] = useState<PortalJob | null>(null);
   const [isApplied, setIsApplied] = useState(false);
+  const portalShellStyle = { '--primary': portalBrandColor } as CSSProperties;
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -48,6 +50,7 @@ export default function CandidatePortal() {
               setup.subheadline ||
               "We're building the next generation of recruitment tools. Explore our open positions and start your journey with us."
             );
+            setPortalBrandColor(details?.brand_color || setup.brand_color || '#6B46FF');
 
             const careerJobs = await getCareerPageJobs({ slug: setup.slug, page_size: 50 });
             apiJobs = careerJobs.results.map((job) => ({
@@ -87,7 +90,10 @@ export default function CandidatePortal() {
 
   if (isApplied) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--background)]">
+      <div
+        className="min-h-screen flex items-center justify-center p-6 bg-[var(--background)]"
+        style={portalShellStyle}
+      >
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -112,7 +118,7 @@ export default function CandidatePortal() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] p-6 md:p-12">
+    <div className="min-h-screen bg-[var(--background)] p-6 md:p-12" style={portalShellStyle}>
       <div className="max-w-4xl mx-auto space-y-12">
         {/* Header */}
         <header className="text-center space-y-4">
