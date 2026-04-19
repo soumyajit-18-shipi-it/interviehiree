@@ -31,7 +31,8 @@ const tabs = [
   { id: 'overview', label: 'Overview' },
   { id: 'resume', label: 'Resume Analysis' },
   { id: 'screening', label: 'Recruiter Screening' },
-  { id: 'functional', label: 'Functional Interview' }
+  { id: 'functional', label: 'Functional Interview' },
+  { id: 'responses', label: 'Candidate Responses' },
 ] as const;
 
 export default function JobDetails({ job, onBack, initialTab = 'Overview' }: JobDetailsProps) {
@@ -39,7 +40,8 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
   const [activeTab, setActiveTab] = useState(
     initialTab.toLowerCase().includes('resume') ? 'resume' : 
     (initialTab.toLowerCase().includes('functional') ? 'functional' :
-    (initialTab.toLowerCase().includes('screening') ? 'screening' : 'overview'))
+    (initialTab.toLowerCase().includes('screening') ? 'screening' :
+    (initialTab.toLowerCase().includes('response') ? 'responses' : 'overview')))
   );
   const [selectedCandidate, setSelectedCandidate] = useState<ScreeningCandidate | FunctionalCandidate | null>(null);
   const [detailView, setDetailView] = useState<Awaited<ReturnType<typeof loadJobDetailView>> | null>(null);
@@ -77,6 +79,7 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
   const resumeCriteria = detailView?.resumeCriteria;
   const screeningCandidates = detailView?.screeningCandidates ?? [];
   const functionalCandidates = detailView?.functionalCandidates ?? [];
+  const responseHighlights = detailView?.responseHighlights ?? [];
 
   const statusLabel = useMemo(() => {
     const normalized = (viewJob.status || '').toLowerCase();
@@ -121,7 +124,10 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
              <Plus size={14} />
              Add Collaborator
           </button>
-          <button className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all shadow-sm">
+          <button
+            onClick={() => setActiveTab('responses')}
+            className="px-4 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all shadow-sm"
+          >
             View Responses
           </button>
         </div>
@@ -174,6 +180,7 @@ export default function JobDetails({ job, onBack, initialTab = 'Overview' }: Job
               {activeTab === 'resume' && <ResumeAnalysisContent job={viewJob} criteria={resumeCriteria} />}
               {activeTab === 'screening' && <ScreeningContent candidates={screeningCandidates} onCandidateClick={setSelectedCandidate} />}
               {activeTab === 'functional' && <FunctionalInterviewContent candidates={functionalCandidates} onCandidateClick={setSelectedCandidate} />}
+              {activeTab === 'responses' && <ResponsesContent responseHighlights={responseHighlights} />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -685,6 +692,55 @@ function FunctionalInterviewContent({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function ResponsesContent({
+  responseHighlights,
+}: {
+  responseHighlights: Array<{
+    applicationId: string;
+    candidateName: string;
+    totalResponses: number;
+    averageScore: number | null;
+    latestResponse: string;
+  }>;
+}) {
+  return (
+    <div className="bg-card rounded-3xl border border-border shadow-sm p-8 min-h-full flex flex-col">
+      <div className="flex items-center gap-3 mb-6">
+        <h2 className="text-2xl font-bold text-foreground">Candidate Responses</h2>
+        <span className="bg-muted text-muted-foreground px-3 py-1 rounded-full text-[11px] font-medium border border-border ml-2">
+          {responseHighlights.length} application{responseHighlights.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {responseHighlights.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+          No candidate responses available yet for this job.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {responseHighlights.map((row) => (
+            <div key={row.applicationId} className="rounded-2xl border border-border bg-card p-4 space-y-2">
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-sm font-bold text-foreground">{row.candidateName}</p>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                  {row.totalResponses} response{row.totalResponses !== 1 ? 's' : ''}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Avg score: {row.averageScore !== null ? `${Math.round(row.averageScore)}/100` : 'N/A'}
+                </span>
+              </div>
+
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {row.latestResponse}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

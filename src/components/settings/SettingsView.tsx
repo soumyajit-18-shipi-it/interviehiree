@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Bell, Shield, X, Check, Camera, Mail, Phone, Building, Save } from 'lucide-react';
+import { User, Bell, Shield, X, Check, Camera, Mail, Phone, Building, Save, LockKeyhole } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
+  changePassword,
+  createOrganization,
+  deleteOrganization,
   ensureOrganizationId,
+  listOrganizations,
   getOrganization,
   getPreferences,
   updateOrganization,
@@ -324,6 +328,227 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
   );
 }
 
+// ---- Organization Tab ----
+function OrganizationTab({
+  organizationId,
+  onOrganizationChange,
+}: {
+  organizationId: string;
+  onOrganizationChange: (organizationId: string) => void;
+}) {
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<Array<{
+    id: string;
+    name: string;
+    domain: string;
+    contact_email: string;
+    location: string;
+  }>>([]);
+  const [newOrganization, setNewOrganization] = useState({
+    name: '',
+    domain: '',
+    contactEmail: '',
+    websiteUrl: '',
+    location: '',
+    description: '',
+  });
+
+  const loadOrganizations = async () => {
+    try {
+      setIsLoading(true);
+      const response = await listOrganizations();
+      setOrganizations(response);
+      if (!organizationId && response[0]?.id) {
+        onOrganizationChange(response[0].id);
+      }
+    } catch (error) {
+      console.error(error);
+      toast('Unable to load organizations.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadOrganizations();
+    // Load once when opening this tab.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleCreateOrganization = async () => {
+    if (!newOrganization.name.trim() || !newOrganization.domain.trim() || !newOrganization.contactEmail.trim()) {
+      toast('Name, domain, and contact email are required.', 'warning');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const created = await createOrganization({
+        name: newOrganization.name.trim(),
+        domain: newOrganization.domain.trim(),
+        contact_email: newOrganization.contactEmail.trim().toLowerCase(),
+        website_url: newOrganization.websiteUrl.trim() || `https://${newOrganization.domain.trim()}.com`,
+        location: newOrganization.location.trim() || 'Remote',
+        description: newOrganization.description.trim() || 'Organization created from settings.',
+      });
+
+      setNewOrganization({
+        name: '',
+        domain: '',
+        contactEmail: '',
+        websiteUrl: '',
+        location: '',
+        description: '',
+      });
+      onOrganizationChange(created.id);
+      toast('Organization created successfully.', 'success');
+      await loadOrganizations();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to create organization.', 'error');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteOrganization = async (id: string) => {
+    if (organizations.length <= 1) {
+      toast('At least one organization is required.', 'warning');
+      return;
+    }
+
+    try {
+      setIsDeletingId(id);
+      await deleteOrganization(id);
+      const next = organizations.find((organization) => organization.id !== id);
+      if (next?.id) {
+        onOrganizationChange(next.id);
+      }
+      toast('Organization deleted.', 'success');
+      await loadOrganizations();
+    } catch (error) {
+      console.error(error);
+      toast('Unable to delete organization.', 'error');
+    } finally {
+      setIsDeletingId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-xl font-bold text-foreground">Organization Management</h3>
+        <p className="text-sm text-muted-foreground mt-1">Create, switch, and delete organizations connected to this account.</p>
+      </div>
+
+      <div className="p-6 border border-border rounded-2xl bg-muted/20 space-y-4">
+        <h4 className="font-bold text-foreground text-sm">Create Organization</h4>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <input
+            type="text"
+            placeholder="Organization name"
+            value={newOrganization.name}
+            onChange={(event) => setNewOrganization((prev) => ({ ...prev, name: event.target.value }))}
+            className="px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+          />
+          <input
+            type="text"
+            placeholder="Domain"
+            value={newOrganization.domain}
+            onChange={(event) => setNewOrganization((prev) => ({ ...prev, domain: event.target.value }))}
+            className="px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+          />
+          <input
+            type="email"
+            placeholder="Contact email"
+            value={newOrganization.contactEmail}
+            onChange={(event) => setNewOrganization((prev) => ({ ...prev, contactEmail: event.target.value }))}
+            className="px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+          />
+          <input
+            type="text"
+            placeholder="Website URL"
+            value={newOrganization.websiteUrl}
+            onChange={(event) => setNewOrganization((prev) => ({ ...prev, websiteUrl: event.target.value }))}
+            className="px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+          />
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <input
+            type="text"
+            placeholder="Location"
+            value={newOrganization.location}
+            onChange={(event) => setNewOrganization((prev) => ({ ...prev, location: event.target.value }))}
+            className="px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+          />
+          <input
+            type="text"
+            placeholder="Description"
+            value={newOrganization.description}
+            onChange={(event) => setNewOrganization((prev) => ({ ...prev, description: event.target.value }))}
+            className="px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+          />
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={handleCreateOrganization}
+            disabled={isCreating}
+            className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 disabled:opacity-70"
+          >
+            {isCreating ? 'Creating...' : 'Create Organization'}
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h4 className="font-bold text-foreground text-sm">Organizations</h4>
+          <button
+            onClick={() => void loadOrganizations()}
+            disabled={isLoading}
+            className="px-3 py-1.5 bg-card border border-border rounded-lg text-xs font-bold text-foreground hover:bg-muted transition-colors disabled:opacity-70"
+          >
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+        <div className="space-y-2">
+          {organizations.map((organization) => (
+            <div key={organization.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-card">
+              <div>
+                <p className="font-bold text-foreground text-sm">{organization.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{organization.domain} • {organization.contact_email} • {organization.location}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onOrganizationChange(organization.id)}
+                  className={clsx(
+                    'px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors',
+                    organization.id === organizationId
+                      ? 'bg-primary/10 text-primary border-primary/20'
+                      : 'bg-card text-foreground border-border hover:bg-muted'
+                  )}
+                >
+                  {organization.id === organizationId ? 'Active' : 'Set Active'}
+                </button>
+                <button
+                  onClick={() => void handleDeleteOrganization(organization.id)}
+                  disabled={isDeletingId === organization.id}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20 transition-colors disabled:opacity-70"
+                >
+                  {isDeletingId === organization.id ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---- Notifications Tab ----
 function NotificationsTab() {
   const [prefs, setPrefs] = useState({
@@ -442,6 +667,109 @@ function DataPrivacyTab({ onOpenCookies }: { onOpenCookies: () => void }) {
   );
 }
 
+// ---- Security Tab ----
+function SecurityTab() {
+  const { toast } = useToast();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!currentPassword || !newPassword) {
+      toast('Please enter your current and new password.', 'warning');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast('New password must be at least 8 characters.', 'warning');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast('New password and confirmation do not match.', 'warning');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast('Password changed successfully.', 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Unable to change password.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div>
+        <h3 className="text-xl font-bold text-foreground">Security</h3>
+        <p className="text-sm text-muted-foreground mt-1">Update your account password securely.</p>
+      </div>
+
+      <div className="space-y-4 p-6 border border-border rounded-2xl bg-muted/20">
+        <div>
+          <label htmlFor="current-password" className="block text-xs font-bold text-foreground mb-1.5 uppercase tracking-wider">Current Password</label>
+          <input
+            id="current-password"
+            type="password"
+            value={currentPassword}
+            onChange={(event) => setCurrentPassword(event.target.value)}
+            className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+            autoComplete="current-password"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="new-password" className="block text-xs font-bold text-foreground mb-1.5 uppercase tracking-wider">New Password</label>
+          <input
+            id="new-password"
+            type="password"
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+            autoComplete="new-password"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="confirm-new-password" className="block text-xs font-bold text-foreground mb-1.5 uppercase tracking-wider">Confirm New Password</label>
+          <input
+            id="confirm-new-password"
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+            autoComplete="new-password"
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="px-6 py-2.5 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-70"
+        >
+          {isSubmitting ? 'Updating...' : 'Update Password'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // ---- Main Settings View ----
 export default function SettingsView() {
   const { toast } = useToast();
@@ -465,15 +793,19 @@ export default function SettingsView() {
 
   const tabs = [
     { id: 'Profile', icon: User },
+    { id: 'Organization', icon: Building },
     { id: 'Notifications', icon: Bell },
     { id: 'Data & Privacy', icon: Shield },
+    { id: 'Security', icon: LockKeyhole },
   ];
 
   const renderContent = () => {
     switch (activeTab) {
       case 'Profile': return <ProfileTab organizationId={organizationId} />;
+      case 'Organization': return <OrganizationTab organizationId={organizationId} onOrganizationChange={setOrganizationId} />;
       case 'Notifications': return <NotificationsTab />;
       case 'Data & Privacy': return <DataPrivacyTab onOpenCookies={() => setIsCookieModalOpen(true)} />;
+      case 'Security': return <SecurityTab />;
       default: return null;
     }
   };

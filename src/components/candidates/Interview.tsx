@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Users, Sparkles, ClipboardCheck } from 'lucide-react';
-import { ensureOrganizationId, listInterviews } from '../../lib/api';
+import { ensureOrganizationId, listApplications, listCandidates, listInterviews } from '../../lib/api';
 import { useToast } from '../ui/Toast';
 
 type InterviewCandidate = {
@@ -10,24 +10,69 @@ type InterviewCandidate = {
   role: string;
   status: string;
   score: string;
+  waitDays: number;
 };
+
+function titleCase(value: string) {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function daysBetween(from?: string, to?: string) {
+  if (!from || !to) {
+    return 0;
+  }
+
+  const start = new Date(from).getTime();
+  const end = new Date(to).getTime();
+
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
+    return 0;
+  }
+
+  return Math.round((end - start) / (1000 * 60 * 60 * 24));
+}
 
 export default function Interview() {
   const { toast } = useToast();
   const [candidates, setCandidates] = useState<InterviewCandidate[]>([]);
+  const totalInInterview = candidates.length;
+  const avgWaitDays =
+    totalInInterview > 0
+      ? Math.round(candidates.reduce((sum, candidate) => sum + candidate.waitDays, 0) / totalInInterview)
+      : 0;
 
   useEffect(() => {
     const loadInterviews = async () => {
       try {
         const organization = await ensureOrganizationId();
-        const response = await listInterviews({ organization, page_size: 100 });
+        const [response, applicationsResponse, candidatesResponse] = await Promise.all([
+          listInterviews({ organization, page_size: 100 }),
+          listApplications({ organization, page_size: 200 }),
+          listCandidates({ organization, page_size: 200 }),
+        ]);
+
+        const applicationById = new Map(applicationsResponse.results.map((application) => [application.id, application]));
+        const candidateById = new Map(candidatesResponse.results.map((candidate) => [candidate.id, candidate]));
+
         setCandidates(
           response.results.map((item) => ({
             id: item.id,
-            name: `Application ${item.application.slice(0, 8)}`,
-            role: item.interview_type,
-            status: item.status,
+            name: (() => {
+              const application = applicationById.get(item.application);
+              const candidate = application ? candidateById.get(application.candidate) : undefined;
+              return candidate?.full_name || application?.candidate_name || `Application ${item.application.slice(0, 8)}`;
+            })(),
+            role: titleCase(item.interview_type),
+            status: titleCase(item.status),
             score: item.score !== null ? `${item.score}%` : 'N/A',
+            waitDays: (() => {
+              const application = applicationById.get(item.application);
+              return daysBetween(application?.applied_at, item.scheduled_for);
+            })(),
           }))
         );
       } catch (error) {
@@ -110,11 +155,11 @@ export default function Interview() {
             <div className="mt-4 pt-4 border-t border-zinc-800 space-y-3">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-zinc-500">Total in Interview</span>
-                <span className="font-bold text-zinc-200">12</span>
+                <span className="font-bold text-zinc-200">{totalInInterview}</span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-zinc-500">Wait Time (Avg)</span>
-                <span className="font-bold text-zinc-200">2 days</span>
+                <span className="font-bold text-zinc-200">{avgWaitDays} days</span>
               </div>
             </div>
           </div>
