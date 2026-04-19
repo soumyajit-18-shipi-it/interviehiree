@@ -124,9 +124,9 @@ function NewJobModal({
         initial={{ scale: 0.95, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.95, opacity: 0, y: 10 }}
-        className="bg-card rounded-3xl w-full max-w-xl border border-border shadow-2xl flex flex-col max-h-[90vh]"
+        className="bg-card rounded-2xl sm:rounded-3xl w-full max-w-xl border border-border shadow-2xl flex flex-col max-h-[92dvh]"
       >
-        <div className="p-6 border-b border-border flex items-center justify-between bg-muted/20">
+        <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between bg-muted/20">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
               <Briefcase size={20} />
@@ -140,13 +140,13 @@ function NewJobModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+            className="p-2 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-muted rounded-full transition-colors"
           >
             <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 overflow-y-auto">
           <div>
             <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
               Job Title *
@@ -167,7 +167,7 @@ function NewJobModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
                 Department
@@ -227,14 +227,14 @@ function NewJobModal({
             <label className="block text-xs font-bold text-foreground mb-2 uppercase tracking-wider">
               Initial Status
             </label>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               {(['Draft', 'Published'] as JobStatus[]).map((s) => (
                 <button
                   type="button"
                   key={s}
                   onClick={() => setStatus(s)}
                   className={clsx(
-                    'flex-1 py-2.5 rounded-xl text-xs font-bold border transition-all',
+                    'flex-1 min-h-[44px] py-2.5 rounded-xl text-xs font-bold border transition-all',
                     status === s
                       ? s === 'Published'
                         ? 'bg-success/10 text-success border-success/30'
@@ -249,11 +249,11 @@ function NewJobModal({
           </div>
         </form>
 
-        <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-3xl">
+        <div className="p-4 sm:p-6 border-t border-border bg-muted/20 flex flex-col-reverse sm:flex-row justify-end gap-3 rounded-b-3xl">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-sm font-bold transition-colors shadow-sm"
+            className="w-full sm:w-auto px-6 min-h-[44px] py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-sm font-bold transition-colors shadow-sm"
           >
             Cancel
           </button>
@@ -263,7 +263,7 @@ function NewJobModal({
               form?.requestSubmit();
             }}
             disabled={isSubmitting}
-            className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-70"
+            className="w-full sm:w-auto px-6 min-h-[44px] py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all disabled:opacity-70"
           >
             {isSubmitting ? 'Creating...' : 'Create Job'}
           </button>
@@ -578,7 +578,7 @@ export default function Dashboard() {
                 <div className="h-8 w-24 bg-[var(--color-secondary)] border border-[var(--color-border)] rounded-xl animate-pulse" />
                 <div className="h-8 w-24 bg-[var(--color-secondary)] border border-[var(--color-border)] rounded-xl animate-pulse" />
               </div>
-              <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="col-span-2 h-[300px] bg-[var(--color-secondary)] border border-[var(--color-border)] rounded-3xl animate-pulse" />
                 <div className="h-[300px] bg-[var(--color-secondary)] border border-[var(--color-border)] rounded-3xl animate-pulse" />
               </div>
@@ -615,15 +615,15 @@ export default function Dashboard() {
             exit={{ opacity: 0 }}
             className="space-y-8"
           >
-            <div className="flex items-center justify-between pb-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between pb-4">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
                   Jobs
                 </h1>
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="relative w-80">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+                <div className="relative w-full sm:w-80">
                   <Search
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                     size={18}
@@ -638,7 +638,7 @@ export default function Dashboard() {
                 </div>
                 <button
                   onClick={() => setIsNewJobModalOpen(true)}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all active:scale-95"
+                  className="flex items-center justify-center gap-2 px-5 min-h-[44px] py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-semibold shadow-lg shadow-primary/20 transition-all active:scale-95"
                 >
                   <Plus size={18} />
                   <span>New Job</span>
@@ -646,9 +646,9 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div className="flex bg-muted/50 p-1 rounded-full border border-border/50">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-2 overflow-x-auto">
+                <div className="flex bg-muted/50 p-1 rounded-full border border-border/50 min-w-max">
                   {filterTabs.map((tab) => {
                     const jobCount =
                       tab === 'All' ? jobs.length : jobs.filter((j) => j.status === tab).length;
@@ -658,7 +658,7 @@ export default function Dashboard() {
                         key={tab}
                         onClick={() => setActiveFilter(tab)}
                         className={clsx(
-                          'relative px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-300',
+                          'relative px-4 sm:px-5 min-h-[40px] py-1.5 rounded-full text-xs font-semibold transition-all duration-300 whitespace-nowrap',
                           activeFilter === tab
                             ? 'bg-primary text-primary-foreground shadow-md'
                             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -673,13 +673,13 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Users size={14} className="text-muted-foreground" />
                 <label className="text-xs font-medium text-muted-foreground">Created by:</label>
                 <select
                   value={createdByFilter}
                   onChange={(e) => setCreatedByFilter(e.target.value)}
-                  className="px-3 py-1.5 bg-card border border-border rounded-full text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  className="px-3 min-h-[40px] py-1.5 bg-card border border-border rounded-full text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   {creatorOptions.map((creator) => (
                     <option key={creator} value={creator}>

@@ -128,15 +128,15 @@ export default function Screening() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-zinc-900">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-900">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight gradient-text">Recruiter Screening</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight gradient-text">Recruiter Screening</h1>
           <p className="text-zinc-400 text-sm mt-1">Review and manage candidate screening processes.</p>
         </div>
         
-        <button className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-xl font-medium shadow-[0_4px_12px_rgba(139,92,246,0.3)] transition-all">
+        <button className="flex items-center justify-center gap-2 px-4 min-h-[44px] py-2 bg-violet-600 hover:bg-violet-500 rounded-xl font-medium shadow-[0_4px_12px_rgba(139,92,246,0.3)] transition-all w-full sm:w-auto">
           <span>Bulk Actions</span>
         </button>
       </div>
@@ -156,9 +156,9 @@ export default function Screening() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
           {/* Score Slider */}
-          <div className="flex items-center gap-2 bg-zinc-900/40 border border-zinc-800/60 p-2 rounded-xl glass">
+          <div className="flex items-center gap-2 bg-zinc-900/40 border border-zinc-800/60 p-2 rounded-xl glass w-full sm:w-auto">
             <Award size={16} className="text-zinc-400" />
             <span className="text-xs text-zinc-400">Score ≥ {scoreRange}</span>
             <input 
@@ -171,10 +171,10 @@ export default function Screening() {
           </div>
 
           {/* Status Dropdown */}
-          <select
+            <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-zinc-900/40 border border-zinc-800/60 rounded-xl glass text-xs text-zinc-300 focus:outline-none focus:border-violet-500"
+            className="px-3 min-h-[44px] py-2 bg-zinc-900/40 border border-zinc-800/60 rounded-xl glass text-xs text-zinc-300 focus:outline-none focus:border-violet-500 w-full sm:w-auto"
           >
             <option value="All">All Statuses</option>
             <option value="Resume Analysis">Resume Analysis</option>
@@ -192,7 +192,7 @@ export default function Screening() {
         className="glass rounded-2xl overflow-hidden border border-zinc-800/60 bg-zinc-900/20"
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[860px] text-left border-collapse">
             <thead>
               <tr className="border-b border-zinc-800/60 bg-zinc-900/40">
                 <th className="p-4 text-xs font-medium text-zinc-400">CANDIDATE</th>

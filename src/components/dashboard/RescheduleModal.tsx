@@ -22,23 +22,23 @@ export default function RescheduleModal({ isOpen, onClose, candidateName = 'Cand
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
-          className="bg-card w-full max-w-lg rounded-3xl border border-border shadow-2xl flex flex-col overflow-hidden"
+          className="bg-card w-full max-w-lg rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col overflow-hidden max-h-[92dvh]"
         >
           {/* Header */}
-          <div className="p-6 border-b border-border flex items-center justify-between">
-            <h2 className="text-xl font-bold text-foreground">Reschedule Interview</h2>
-            <button onClick={onClose} className="p-2 bg-muted hover:bg-muted/80 rounded-full text-muted-foreground transition-colors">
+          <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground">Reschedule Interview</h2>
+            <button onClick={onClose} className="p-2 min-h-[44px] min-w-[44px] bg-muted hover:bg-muted/80 rounded-full text-muted-foreground transition-colors">
               <X size={18} />
             </button>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-5 sm:space-y-6 overflow-y-auto">
             <p className="text-sm font-medium text-muted-foreground">
               Rescheduling interview for <strong className="text-foreground">{candidateName}</strong>
             </p>
 
             {/* Previous Schedule */}
-            <div className="bg-muted/50 border border-border rounded-xl p-4 flex gap-6 text-muted-foreground opacity-80">
+            <div className="bg-muted/50 border border-border rounded-xl p-4 flex flex-col sm:flex-row gap-4 sm:gap-6 text-muted-foreground opacity-80">
               <div className="flex flex-col gap-1">
                 <span className="text-xs font-bold uppercase tracking-wider">Previous Date</span>
                 <span className="text-sm font-semibold opacity-80 flex items-center gap-1.5"><Calendar size={14} /> Oct 12, 2023</span>
@@ -64,7 +64,7 @@ export default function RescheduleModal({ isOpen, onClose, candidateName = 'Cand
               </div>
               <div>
                 <label className="block text-xs font-bold text-foreground mb-2">New Time</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <select className="px-4 py-2 bg-background border border-border rounded-xl text-sm text-foreground focus:outline-none focus:border-primary shadow-sm">
                     <option>10</option>
                     <option>11</option>
@@ -96,11 +96,11 @@ export default function RescheduleModal({ isOpen, onClose, candidateName = 'Cand
           </div>
 
           {/* Footer */}
-          <div className="p-6 border-t border-border bg-muted/20 flex items-center justify-end gap-3">
-            <button onClick={onClose} className="px-6 py-2.5 bg-transparent border-0 text-muted-foreground rounded-xl text-sm font-bold hover:text-foreground transition-colors">
+          <div className="p-4 sm:p-6 border-t border-border bg-muted/20 flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-3">
+            <button onClick={onClose} className="w-full sm:w-auto px-6 min-h-[44px] py-2.5 bg-transparent border-0 text-muted-foreground rounded-xl text-sm font-bold hover:text-foreground transition-colors">
               Cancel
             </button>
-            <button className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+            <button className="w-full sm:w-auto px-6 min-h-[44px] py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
               Confirm Reschedule
             </button>
           </div>

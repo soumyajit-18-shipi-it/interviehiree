@@ -87,7 +87,7 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-[var(--foreground)] flex items-center gap-2">
@@ -99,7 +99,7 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
             placeholder="John Doe"
             value={formData.name}
             onChange={e => setFormData({ ...formData, name: e.target.value })}
-            className="w-full bg-[var(--background)]/50 border border-[var(--border)] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+            className="w-full bg-[var(--background)]/50 border border-[var(--border)] rounded-xl px-4 min-h-[44px] py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
           />
         </div>
         <div className="space-y-2">
@@ -112,7 +112,7 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
             placeholder="john@example.com"
             value={formData.email}
             onChange={e => setFormData({ ...formData, email: e.target.value })}
-            className="w-full bg-[var(--background)]/50 border border-[var(--border)] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+            className="w-full bg-[var(--background)]/50 border border-[var(--border)] rounded-xl px-4 min-h-[44px] py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
           />
         </div>
         <div className="space-y-2 md:col-span-2">
@@ -125,7 +125,7 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
             placeholder="+1 (555) 000-0000"
             value={formData.phone}
             onChange={e => setFormData({ ...formData, phone: e.target.value })}
-            className="w-full bg-[var(--background)]/50 border border-[var(--border)] rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
+            className="w-full bg-[var(--background)]/50 border border-[var(--border)] rounded-xl px-4 min-h-[44px] py-3 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] transition-all"
           />
         </div>
       </div>
@@ -142,7 +142,7 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
             onDragOver={onDrag}
             onDrop={onDrop}
             className={cn(
-              "border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer group relative overflow-hidden",
+              "border-2 border-dashed rounded-2xl p-6 sm:p-10 text-center transition-all cursor-pointer group relative overflow-hidden",
               dragActive ? "border-[var(--primary)] bg-[var(--primary)]/5" : "border-[var(--border)] hover:border-[var(--primary)]/50 hover:bg-[var(--primary)]/5"
             )}
             onClick={() => document.getElementById('resume-upload')?.click()}
@@ -159,7 +159,7 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
                 <Upload size={32} />
               </div>
               <div>
-                <p className="text-lg font-bold text-[var(--foreground)]">Click or drag to upload</p>
+                <p className="text-base sm:text-lg font-bold text-[var(--foreground)]">Click or drag to upload</p>
                 <p className="text-[var(--muted-foreground)] text-sm">PDF, DOC, DOCX (Max 10MB)</p>
               </div>
             </div>
@@ -170,20 +170,20 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
             )}
           </div>
         ) : (
-          <div className="flex items-center justify-between p-6 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-2xl">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 sm:p-6 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-2xl">
+            <div className="flex items-center gap-4 min-w-0">
               <div className="w-12 h-12 bg-[var(--primary)]/10 text-[var(--primary)] rounded-xl flex items-center justify-center">
                 <CheckCircle2 size={24} />
               </div>
-              <div className="text-left">
-                <p className="font-bold text-[var(--foreground)]">{formData.resume.name}</p>
+              <div className="text-left min-w-0">
+                <p className="font-bold text-[var(--foreground)] break-all">{formData.resume.name}</p>
                 <p className="text-[var(--muted-foreground)] text-xs">{(formData.resume.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
             </div>
             <button 
               type="button"
               onClick={() => setFormData({ ...formData, resume: null })}
-              className="p-2 hover:bg-[var(--primary)]/10 text-[var(--muted-foreground)] hover:text-red-500 rounded-lg transition-colors"
+              className="self-end sm:self-auto p-2 min-h-[44px] min-w-[44px] hover:bg-[var(--primary)]/10 text-[var(--muted-foreground)] hover:text-red-500 rounded-lg transition-colors"
             >
               <X size={20} />
             </button>
@@ -195,7 +195,7 @@ export default function ApplicationForm({ jobTitle, jobId, organizationId, onSuc
         type="submit"
         disabled={isSubmitting}
         className={cn(
-            "w-full py-4 rounded-2xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3",
+            "w-full min-h-[48px] py-4 rounded-2xl font-bold text-base sm:text-lg shadow-lg transition-all flex items-center justify-center gap-3 text-center",
             isSubmitting 
                 ? "bg-[var(--muted)] text-[var(--muted-foreground)] cursor-not-allowed" 
                 : "bg-[var(--primary)] text-white hover:opacity-90 hover:scale-[1.02] shadow-[var(--primary)]/20"

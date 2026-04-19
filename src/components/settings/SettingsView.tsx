@@ -67,16 +67,16 @@ function CookieModal({
           initial={{ scale: 0.95, opacity: 0, y: 10 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 10 }}
-          className="bg-card rounded-3xl w-full max-w-lg border border-border shadow-2xl flex flex-col"
+          className="bg-card rounded-2xl sm:rounded-3xl w-full max-w-lg border border-border shadow-2xl flex flex-col max-h-[92dvh]"
         >
           <div className="p-6 border-b border-border flex items-center justify-between">
             <h3 className="font-bold text-lg text-foreground">Cookie Preferences</h3>
-            <button onClick={onClose} className="p-2 text-muted-foreground hover:bg-muted rounded-full">
+            <button onClick={onClose} className="p-2 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-muted rounded-full">
               <X size={18} />
             </button>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-6 overflow-y-auto">
             <p className="text-sm text-muted-foreground mb-4">
               We use cookies to enhance your browsing experience, serve personalized ads or content, and analyze our traffic.
             </p>
@@ -229,7 +229,7 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
       </div>
 
       {/* Name Row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-foreground mb-1.5 uppercase tracking-wider">First Name</label>
           <input
@@ -251,7 +251,7 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
       </div>
 
       {/* Email + Phone */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-foreground mb-1.5 uppercase tracking-wider">
             <Mail size={10} className="inline mr-1" />Email
@@ -277,7 +277,7 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
       </div>
 
       {/* Company + Role */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-bold text-foreground mb-1.5 uppercase tracking-wider">
             <Building size={10} className="inline mr-1" />Company
@@ -315,7 +315,7 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
         <button
           type="submit"
           className={clsx(
-            'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
+            'flex items-center gap-2 px-6 min-h-[44px] py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
             saved
               ? 'bg-success text-white shadow-success/20'
               : 'bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90'
@@ -516,12 +516,12 @@ function OrganizationTab({
         </div>
         <div className="space-y-2">
           {organizations.map((organization) => (
-            <div key={organization.id} className="flex items-center justify-between p-4 border border-border rounded-xl bg-card">
+            <div key={organization.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border border-border rounded-xl bg-card">
               <div>
                 <p className="font-bold text-foreground text-sm">{organization.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">{organization.domain} • {organization.contact_email} • {organization.location}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => onOrganizationChange(organization.id)}
                   className={clsx(
@@ -613,7 +613,7 @@ function NotificationsTab() {
         <button
           onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2500); }}
           className={clsx(
-            'flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
+            'flex items-center gap-2 px-6 min-h-[44px] py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg',
             saved ? 'bg-success text-white shadow-success/20' : 'bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90'
           )}
         >
@@ -633,14 +633,14 @@ function DataPrivacyTab({ onOpenCookies }: { onOpenCookies: () => void }) {
         <p className="text-sm text-muted-foreground mt-1">Manage your data sharing and cookie tracking preferences.</p>
       </div>
 
-      <div className="p-6 border border-border rounded-2xl bg-muted/30 flex items-center justify-between">
+      <div className="p-6 border border-border rounded-2xl bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h4 className="font-bold text-foreground">Cookie Tracking Center</h4>
           <p className="text-xs text-muted-foreground mt-1">Control how we use tracking cookies on your device.</p>
         </div>
         <button
           onClick={onOpenCookies}
-          className="px-5 py-2.5 bg-background border border-border text-foreground hover:bg-muted rounded-xl text-sm font-bold transition-colors shadow-sm"
+          className="w-full sm:w-auto px-5 min-h-[44px] py-2.5 bg-background border border-border text-foreground hover:bg-muted rounded-xl text-sm font-bold transition-colors shadow-sm"
         >
           Manage Cookies
         </button>
@@ -761,7 +761,7 @@ function SecurityTab() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2.5 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-70"
+          className="px-6 min-h-[44px] py-2.5 rounded-xl text-sm font-bold bg-primary text-primary-foreground shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-70"
         >
           {isSubmitting ? 'Updating...' : 'Update Password'}
         </button>
@@ -818,9 +818,9 @@ export default function SettingsView() {
         <p className="text-muted-foreground text-sm mt-1">Manage your account, team, and security preferences.</p>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8">
         {/* Nav Tabs */}
-        <div className="w-full md:w-56 space-y-1 flex-shrink-0">
+        <div className="w-full md:w-56 flex md:flex-col gap-2 md:gap-1 overflow-x-auto md:overflow-visible flex-shrink-0 pb-1">
           {tabs.map(tab => {
             const Icon = tab.icon;
             return (
@@ -828,7 +828,7 @@ export default function SettingsView() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={clsx(
-                  'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold',
+                  'w-auto md:w-full min-h-[44px] flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-bold whitespace-nowrap',
                   activeTab === tab.id
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -842,7 +842,7 @@ export default function SettingsView() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-card rounded-3xl border border-border shadow-sm p-8 max-w-3xl">
+        <div className="flex-1 bg-card rounded-3xl border border-border shadow-sm p-4 sm:p-6 md:p-8 max-w-3xl min-w-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
