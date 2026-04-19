@@ -167,42 +167,48 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
-            className="bg-card rounded-3xl w-full max-w-3xl border border-border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            className="bg-card rounded-2xl sm:rounded-3xl w-full max-w-3xl border border-border shadow-2xl flex flex-col max-h-[92dvh] overflow-hidden"
           >
             {/* Header */}
-            <div className="p-6 border-b border-border flex items-center justify-between bg-muted/20">
-              <div className="flex items-center gap-3">
+            <div className="p-4 sm:p-6 border-b border-border flex items-start justify-between gap-3 bg-muted/20">
+              <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
                   <ShieldCheck size={24} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-xl text-foreground">Career Page Setup</h3>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-lg sm:text-xl text-foreground break-words">Career Page Setup</h3>
                   <p className="text-muted-foreground text-xs font-medium mt-0.5">Customize your public-facing AI job board.</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-muted transition-colors">
+              <div className="hidden md:flex items-center gap-3">
+                <button className="flex items-center gap-2 px-3 min-h-[44px] py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-muted transition-colors">
                   <LinkIcon size={14} /> Copy Embed
                 </button>
                   <button
                     onClick={() => window.open(`/career-pages/career-page/${slug}/`, '_blank')}
-                    className="flex items-center gap-2 px-3 py-1.5 border border-primary/20 bg-primary/5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+                    className="flex items-center gap-2 px-3 min-h-[44px] py-1.5 border border-primary/20 bg-primary/5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
                   >
                   <ExternalLink size={14} /> View Live
                 </button>
                 <div className="w-px h-6 bg-border mx-1"></div>
                 <button 
                   onClick={onClose}
-                  className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+                  className="p-2 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-muted rounded-full transition-colors"
                 >
                   <X size={18} />
                 </button>
               </div>
+              <button 
+                onClick={onClose}
+                className="md:hidden p-2 min-h-[44px] min-w-[44px] text-muted-foreground hover:bg-muted rounded-full transition-colors"
+              >
+                <X size={18} />
+              </button>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="px-6 border-b border-border bg-card">
-              <div className="flex items-center gap-6">
+            <div className="px-4 sm:px-6 border-b border-border bg-card">
+              <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto">
                 {tabs.map(tab => {
                   const Icon = tab.icon;
                   return (
@@ -210,7 +216,7 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
                       className={clsx(
-                        "flex items-center gap-2 py-4 border-b-2 transition-colors",
+                        "flex items-center gap-2 py-4 border-b-2 transition-colors whitespace-nowrap",
                         activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
                       )}
                     >
@@ -223,10 +229,10 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
             </div>
 
             {/* Content Area */}
-            <div className="p-6 overflow-y-auto flex-1 bg-card/50">
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 bg-card/50">
               {activeTab === 'Theme' && (
                 <div className="space-y-6 max-w-md mx-auto">
-                  <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/30 hover:border-primary/40 transition-colors cursor-pointer group">
+                  <label className="flex flex-col items-center justify-center p-6 sm:p-8 border-2 border-dashed border-border rounded-3xl bg-muted/30 hover:border-primary/40 transition-colors cursor-pointer group">
                     <input
                       type="file"
                       accept="image/*"
@@ -387,17 +393,17 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-3xl">
+            <div className="p-4 sm:p-6 border-t border-border bg-muted/20 flex flex-col-reverse sm:flex-row justify-end gap-3 rounded-b-3xl">
               <button 
                 onClick={onClose}
-                className="px-6 py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-sm font-bold transition-colors shadow-sm"
+                className="w-full sm:w-auto px-6 min-h-[44px] py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-sm font-bold transition-colors shadow-sm"
               >
                 Cancel
               </button>
               <button 
                 onClick={saveSetup}
                 disabled={isUploadingLogo}
-                className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all cursor-pointer"
+                className="w-full sm:w-auto px-6 min-h-[44px] py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all cursor-pointer"
               >
                 {isUploadingLogo ? 'Uploading...' : 'Save Changes'}
               </button>

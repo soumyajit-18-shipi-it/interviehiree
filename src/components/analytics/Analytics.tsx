@@ -448,8 +448,8 @@ export default function Analytics() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative min-w-[260px]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap w-full lg:w-auto">
+            <div className="relative w-full sm:w-[260px]">
               <Search
                 size={15}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9aa3af]"
@@ -462,7 +462,7 @@ export default function Analytics() {
               />
             </div>
 
-            <div className="relative min-w-[240px]">
+            <div className="relative w-full sm:w-[240px]">
               <select
                 value={selectedJob}
                 onChange={(e) => setSelectedJob(e.target.value)}
@@ -481,7 +481,7 @@ export default function Analytics() {
               />
             </div>
 
-            <div className="relative min-w-[170px]">
+            <div className="relative w-full sm:w-[170px]">
               <CalendarDays
                 size={15}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9aa3af]"
@@ -626,22 +626,66 @@ export default function Analytics() {
           transition={{ duration: 0.25 }}
           className="overflow-hidden rounded-2xl bg-card shadow-sm"
         >
-          <div className="flex items-center justify-between border-b border-[#eef2ef] px-4 py-4 md:px-5">
-            <button className="rounded-xl border border-[#e6ebe7] bg-white px-4 py-2 text-sm font-medium text-[#2c3440] shadow-[0_1px_2px_rgba(16,24,40,0.03)]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-[#eef2ef] px-4 py-4 md:px-5">
+            <button className="rounded-xl border border-[#e6ebe7] bg-white px-4 py-2 text-sm font-medium text-[#2c3440] shadow-[0_1px_2px_rgba(16,24,40,0.03)] w-full sm:w-auto text-left sm:text-center">
               Job wise breakdown
             </button>
 
             <button
               onClick={() => exportToCSV(tableRows)}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#dad7fe] bg-[#f4f2ff] px-4 py-2 text-sm font-medium text-[#7367f0] transition hover:bg-[#ede8ff]"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dad7fe] bg-[#f4f2ff] px-4 py-2 text-sm font-medium text-[#7367f0] transition hover:bg-[#ede8ff] w-full sm:w-auto"
             >
               <Download size={15} />
               Export to Excel
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-[1650px] w-full border-collapse text-sm">
+          <div className="md:hidden divide-y divide-[#eef2ef]">
+            {paginatedRows.length > 0 ? (
+              paginatedRows.map((row) => (
+                <div key={row.id} className="px-4 py-4 space-y-3 bg-white">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-[#5b4dbb] break-words">{row.jobName}</p>
+                    <p className="text-xs text-[#7b8494]">{row.createdBy} • {row.businessUnit}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <MetricChip label="Applicants" value={row.totalApplicants} />
+                    <MetricChip label="Resume" value={row.resumeAnalysed} />
+                    <MetricChip label="Recruiter" value={row.recruiterTotal} />
+                    <MetricChip label="Functional" value={row.functionalTotal} />
+                  </div>
+
+                  <details className="rounded-xl border border-[#edf1ee] bg-[#fafbfa] px-3 py-2">
+                    <summary className="cursor-pointer text-xs font-semibold text-[#445064]">View Stage Breakdown</summary>
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-[#5f6978]">
+                      <span>Career Page: {row.careerPage}</span>
+                      <span>Bulk Upload: {row.bulkUpload}</span>
+                      <span>Scheduled: {row.scheduled}</span>
+                      <span>Direct Link: {row.directLink}</span>
+                      <span>Resume Shortlist: {row.resumeShortlisted}</span>
+                      <span>Resume Waitlist: {row.resumeWaitlisted}</span>
+                      <span>Recruiter Attempted: {row.recruiterAttempted}</span>
+                      <span>Recruiter Scheduled: {row.recruiterScheduled}</span>
+                      <span>Recruiter Shortlist: {row.recruiterShortlisted}</span>
+                      <span>Recruiter Waitlist: {row.recruiterWaitlisted}</span>
+                      <span>Functional Attempted: {row.functionalAttempted}</span>
+                      <span>Functional Scheduled: {row.functionalScheduled}</span>
+                      <span>Functional Shortlist: {row.functionalShortlisted}</span>
+                      <span>Functional Waitlist: {row.functionalWaitlisted}</span>
+                    </div>
+                  </details>
+                </div>
+              ))
+            ) : (
+              <div className="px-4 py-10 text-center text-sm text-[#8a94a3]">
+                No records found for the selected filters.
+              </div>
+            )}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto overscroll-x-contain">
+            <table className="min-w-[1500px] lg:min-w-[1650px] w-full border-collapse text-sm">
               <thead>
                 <tr className="bg-[#fafbfa]">
                   <HeaderCell rowSpan={2} align="left">
@@ -756,7 +800,7 @@ export default function Analytics() {
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-              <div className="flex items-center gap-2 text-sm text-[#6b7280]">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-[#6b7280]">
                 <span>Rows per page:</span>
                 <select
                   value={rowsPerPage}
@@ -769,7 +813,7 @@ export default function Analytics() {
                 </select>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
@@ -811,8 +855,8 @@ function HeaderCell({
     <th
       rowSpan={rowSpan}
       className={clsx(
-        "border-b border-r border-[#edf1ee] px-4 py-5 text-sm font-semibold text-[#2a313a]",
-        align === "left" ? "text-left min-w-[180px]" : "text-center"
+        "border-b border-r border-[#edf1ee] px-4 py-5 text-sm font-semibold text-[#2a313a] whitespace-nowrap",
+        align === "left" ? "text-left min-w-[220px]" : "text-center"
       )}
     >
       {children}
@@ -833,7 +877,7 @@ function GroupHeader({
     <th
       colSpan={colSpan}
       className={clsx(
-        "border-b border-r border-[#edf1ee] px-4 py-4 text-center text-[15px] font-semibold text-[#2a313a]",
+        "border-b border-r border-[#edf1ee] px-4 py-4 text-center text-[15px] font-semibold text-[#2a313a] whitespace-nowrap",
         bg
       )}
     >
@@ -844,7 +888,7 @@ function GroupHeader({
 
 function SubHeaderCell({ children }: { children: React.ReactNode }) {
   return (
-    <th className="border-b border-r border-[#edf1ee] px-4 py-4 text-center font-medium text-[#5f6978]">
+    <th className="border-b border-r border-[#edf1ee] px-4 py-4 text-center font-medium text-[#5f6978] whitespace-nowrap">
       {children}
     </th>
   );
@@ -878,6 +922,15 @@ function BodyCell({
     >
       {value}
     </td>
+  );
+}
+
+function MetricChip({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-[#edf1ee] bg-[#fafbfa] px-2.5 py-2">
+      <p className="text-[11px] text-[#7b8494]">{label}</p>
+      <p className="text-sm font-semibold text-[#2a313a] leading-5">{value}</p>
+    </div>
   );
 }
 

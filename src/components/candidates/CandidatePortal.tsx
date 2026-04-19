@@ -91,18 +91,18 @@ export default function CandidatePortal() {
   if (isApplied) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center p-6 bg-[var(--background)]"
+        className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-[var(--background)]"
         style={portalShellStyle}
       >
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="glass-panel max-w-md w-full p-12 text-center space-y-6"
+          className="glass-panel max-w-md w-full p-6 sm:p-10 text-center space-y-6"
         >
           <div className="w-20 h-20 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto">
             <CheckCircle2 size={40} />
           </div>
-          <h2 className="text-3xl font-bold gradient-text">Application Sent!</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold gradient-text">Application Sent!</h2>
           <p className="text-[var(--muted-foreground)]">
             Thank you for applying to the <strong>{selectedJob?.title}</strong> role. Our team (and our AI) will review your resume shortly.
           </p>
@@ -118,8 +118,8 @@ export default function CandidatePortal() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)] p-6 md:p-12" style={portalShellStyle}>
-      <div className="max-w-4xl mx-auto space-y-12">
+    <div className="min-h-screen bg-[var(--background)] p-4 sm:p-6 md:p-10" style={portalShellStyle}>
+      <div className="max-w-4xl mx-auto space-y-8 sm:space-y-12">
         {/* Header */}
         <header className="text-center space-y-4">
           <motion.div 
@@ -133,7 +133,7 @@ export default function CandidatePortal() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-5xl md:text-6xl font-extrabold tracking-tight gradient-text"
+            className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight gradient-text break-words"
           >
             {portalHeadline}
           </motion.h1>
@@ -141,7 +141,7 @@ export default function CandidatePortal() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="text-[var(--muted-foreground)] text-lg max-w-2xl mx-auto"
+            className="text-[var(--muted-foreground)] text-base sm:text-lg max-w-2xl mx-auto break-words"
           >
             {portalSubheadline}
           </motion.p>
@@ -162,26 +162,26 @@ export default function CandidatePortal() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  className="glass-panel group p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 cursor-pointer hover:border-[var(--primary)]/40 transition-all"
+                  className="glass-panel group p-5 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-6 cursor-pointer hover:border-[var(--primary)]/40 transition-all"
                   onClick={() => setSelectedJob(job)}
                 >
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 rounded-lg bg-[var(--secondary)]/10 text-[var(--secondary)] text-xs font-bold uppercase tracking-wider">
+                    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                      <span className="px-3 py-1 rounded-lg bg-[var(--secondary)]/10 text-[var(--secondary)] text-xs font-bold uppercase tracking-wider break-words">
                         {job.department}
                       </span>
-                      <span className="flex items-center gap-1.5 text-[var(--muted-foreground)] text-sm">
+                      <span className="flex items-center gap-1.5 text-[var(--muted-foreground)] text-sm break-words">
                         <MapPin size={14} /> {job.location}
                       </span>
                     </div>
-                    <h3 className="text-2xl font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
+                    <h3 className="text-xl sm:text-2xl font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors break-words">
                       {job.title}
                     </h3>
                     <p className="text-[var(--muted-foreground)] text-sm line-clamp-2 max-w-xl">
                       {job.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between gap-4 w-full md:w-auto">
                     <span className="hidden md:flex items-center gap-1.5 text-[var(--muted-foreground)] text-sm">
                       <Clock size={14} /> {job.type}
                     </span>
@@ -207,12 +207,12 @@ export default function CandidatePortal() {
                 <ChevronLeft size={20} /> Back to Open Positions
               </button>
 
-              <div className="glass-panel p-8 md:p-12 overflow-hidden relative">
+              <div className="glass-panel p-5 sm:p-8 md:p-12 overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--primary)]/5 blur-3xl rounded-full -mr-32 -mt-32" />
                 
                 <div className="relative space-y-12">
                   <div className="space-y-4">
-                    <h2 className="text-4xl font-extrabold text-[var(--foreground)]">Applying for {selectedJob.title}</h2>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[var(--foreground)] break-words">Applying for {selectedJob.title}</h2>
                     <div className="flex flex-wrap gap-4 text-sm text-[var(--muted-foreground)]">
                       <span className="bg-[var(--secondary)]/10 px-3 py-1 rounded-full">{selectedJob.department}</span>
                       <span className="flex items-center gap-1"><MapPin size={14} /> {selectedJob.location}</span>
@@ -232,7 +232,7 @@ export default function CandidatePortal() {
           )}
         </AnimatePresence>
 
-        <footer className="text-center pt-12 border-t border-[var(--border)]">
+        <footer className="text-center pt-8 sm:pt-12 border-t border-[var(--border)] px-2">
           <p className="text-[var(--muted-foreground)] text-sm">
             © 2026 ATSDash Technologies. All rights reserved. 
             <span className="mx-2">|</span> 

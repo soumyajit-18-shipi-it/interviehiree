@@ -58,11 +58,11 @@ export default function CandidatePipeline() {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-[var(--color-border)]">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight gradient-text">Candidate Pipeline</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight gradient-text">Candidate Pipeline</h1>
           <p className="text-[var(--color-text-sub)] text-sm mt-1">Visualize your recruitment funnel and conversion rates.</p>
         </div>
       </div>
@@ -72,20 +72,20 @@ export default function CandidatePipeline() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="glass rounded-3xl p-8 bg-[var(--color-secondary)]/20 border border-[var(--color-border)]"
+        className="glass rounded-3xl p-4 sm:p-8 bg-[var(--color-secondary)]/20 border border-[var(--color-border)]"
       >
         <h3 className="font-semibold text-lg text-[var(--color-text-title)] mb-6 flex items-center gap-2">
           <TrendingUp size={20} className="text-violet-400" />
           <span>Conversion Funnel</span>
         </h3>
 
-        <div className="flex flex-col md:flex-row items-stretch justify-between gap-4 h-[180px]">
+        <div className="flex flex-col md:flex-row items-stretch justify-between gap-4 min-h-[180px]">
           {funnelStages.map((stage, index) => {
             const nextStage = funnelStages[index + 1];
             const conversion = nextStage ? Math.round((nextStage.count / stage.count) * 100) : null;
 
             return (
-              <div key={stage.id} className="flex-1 flex items-center">
+              <div key={stage.id} className="flex-1 flex items-center min-w-0">
                 {/* Stage Node */}
                 <motion.div 
                   initial={{ scale: 0.9, opacity: 0 }}
@@ -108,7 +108,7 @@ export default function CandidatePipeline() {
 
                 {/* Connecting Arrow & Conversion */}
                 {conversion !== null && (
-                  <div className="flex flex-col items-center justify-center px-2">
+                  <div className="hidden md:flex flex-col items-center justify-center px-2">
                     <ArrowRight className="text-[var(--color-text-sub)]" size={20} />
                     <span className="text-[10px] font-bold text-violet-400 mt-1">{conversion}%</span>
                   </div>

@@ -113,11 +113,44 @@
 }
 
 @layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
   body {
     background-color: var(--background);
     color: var(--foreground);
     font-family: 'Plus Jakarta Sans', sans-serif;
+    line-height: 1.5;
+    text-wrap: pretty;
+    overflow-wrap: anywhere;
     @apply antialiased transition-colors duration-300;
+  }
+
+  img,
+  svg,
+  video,
+  canvas,
+  iframe {
+    max-width: 100%;
+    height: auto;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
   }
 
   select {
@@ -162,4 +195,13 @@
 
 .recharts-tooltip-item {
   @apply !text-[var(--muted-foreground)] !text-xs;
+}
+
+@media (min-width: 768px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 14px;
+  }
 }
