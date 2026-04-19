@@ -1,5 +1,6 @@
 import {
   ensureOrganizationId,
+  getResumeConfiguration,
   getApplicationResponsesSummary,
   getJobAiInsights,
   getCandidateResponsesOverview,
@@ -204,7 +205,19 @@ function buildFunnelStages(pipeline: JobPipeline | null, applications: Applicati
   }));
 }
 
-function buildResumeCriteria(job: ApiJob): ResumeCriteria {
+function buildResumeCriteria(job: ApiJob, resumeConfiguration?: { required_skills?: string[]; auto_reject_keywords?: string[]; preferred_skills?: string[] } | null): ResumeCriteria {
+  const requiredSkills = (resumeConfiguration?.required_skills ?? []).map((item) => item.trim()).filter(Boolean);
+  const autoRejectKeywords = (resumeConfiguration?.auto_reject_keywords ?? []).map((item) => item.trim()).filter(Boolean);
+  const preferredSkills = (resumeConfiguration?.preferred_skills ?? []).map((item) => item.trim()).filter(Boolean);
+
+  if (requiredSkills.length || autoRejectKeywords.length || preferredSkills.length) {
+    return {
+      mustHave: requiredSkills,
+      redFlags: autoRejectKeywords,
+      goodToHave: preferredSkills,
+    };
+  }
+
   const description = job.description || '';
   const title = job.title || 'this role';
   const role = job.role || job.business_unit || 'the team';
@@ -509,9 +522,10 @@ function buildScoreDistribution(analyses: ResumeAnalysis[]) {
 
 export async function loadJobDetailView(job: JobLike): Promise<JobDetailView> {
   const organizationId = job.organization ?? (await ensureOrganizationId().catch(() => ''));
-  const [fullJobResponse, pipeline, applicationsResponse, candidatesResponse, analysesResponse, interviewsResponse, responsesOverview, aiInsightsPayload] = await Promise.all([
+  const [fullJobResponse, pipeline, resumeConfiguration, applicationsResponse, candidatesResponse, analysesResponse, interviewsResponse, responsesOverview, aiInsightsPayload] = await Promise.all([
     getJob(job.id).catch(() => null),
     getJobPipeline(job.id).catch(() => null),
+    getResumeConfiguration(job.id).catch(() => null),
     listApplications({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
     listCandidates({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
     listResumeAnalyses({ organization: organizationId, job: job.id, page_size: 200 }).catch(() => ({ count: 0, next: null, previous: null, results: [] })),
@@ -538,7 +552,7 @@ export async function loadJobDetailView(job: JobLike): Promise<JobDetailView> {
     insights: buildInsights(applications, analyses, interviews, funnelSources, responsesOverview, aiInsightsPayload),
     scoreDistribution: buildScoreDistribution(analyses),
     overview: buildOverviewMetrics(fullJob, applications, interviews),
-    resumeCriteria: buildResumeCriteria(fullJob),
+    resumeCriteria: buildResumeCriteria(fullJob, resumeConfiguration),
     screeningCandidates: buildScreeningCandidates(applications, candidates, analyses),
     functionalCandidates: buildFunctionalCandidates(applications, candidates, interviews),
     responseHighlights,
