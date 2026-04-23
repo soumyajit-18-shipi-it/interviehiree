@@ -426,7 +426,7 @@ export default function JobCard({
                       }
                     }}
                     placeholder="Type and press Enter or comma"
-                    className="flex-1 min-w-[180px] outline-none text-lg text-slate-700 placeholder:text-slate-400"
+                    className="flex-1 min-w-0 outline-none text-lg text-slate-700 placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -458,7 +458,7 @@ export default function JobCard({
               </h2>
 
               <div className="flex items-center gap-3">
-                <div className="hidden sm:flex items-center gap-2 border border-slate-300 rounded-xl px-4 py-3 min-w-[420px] text-slate-700">
+                <div className="hidden sm:flex items-center gap-2 border border-slate-300 rounded-xl px-4 py-3 min-w-[260px] lg:min-w-[420px] text-slate-700">
                   <span className="truncate">{job.title} - HR Screening</span>
                   <ChevronDown size={18} className="ml-auto shrink-0" />
                 </div>
@@ -539,7 +539,7 @@ export default function JobCard({
                   </div>
                 </div>
 
-                <div className="border border-slate-300 rounded-xl px-4 py-3 min-w-[260px] flex items-center gap-2 text-slate-600">
+                <div className="border border-slate-300 rounded-xl px-4 py-3 w-full sm:w-auto sm:min-w-[220px] flex items-center gap-2 text-slate-600">
                   <span>{interviewSettings.accessType}</span>
                   <ChevronDown size={18} className="ml-auto shrink-0" />
                 </div>

@@ -69,7 +69,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-[100dvh] overflow-hidden font-sans transition-colors duration-300 bg-background text-foreground">
+    <div className="flex min-h-[100dvh] flex-col md:h-[100dvh] md:flex-row md:overflow-hidden font-sans transition-colors duration-300 bg-background text-foreground">
       {/* Sidebar Navigation */}
       <div className="hidden md:flex">
         <Sidebar activeTab={activeTab} setActiveTab={handleTabChange} />
@@ -83,7 +83,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <motion.main 
-        className="flex-1 transition-all duration-300 pt-16 p-4 pb-24 md:pb-4 md:pt-0 h-full overflow-y-auto flex flex-col md:ml-[72px]"
+        className="flex-1 transition-all duration-300 pt-[calc(4rem+env(safe-area-inset-top))] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-4 md:pt-4 md:h-full overflow-y-auto flex flex-col md:ml-[72px]"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.4 }}
@@ -105,7 +105,7 @@ export default function App() {
       </motion.main>
 
       {/* Bottom Navigation for Mobile */}
-      <div className="md:hidden flex fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 justify-around items-center px-2 py-3 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+      <div className="md:hidden flex fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border z-50 justify-between items-center px-1 py-2 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -114,7 +114,7 @@ export default function App() {
               key={item.id}
               onClick={() => handleTabChange(item.id)}
               className={clsx(
-                'flex flex-col items-center justify-center gap-1 min-w-[64px] transition-all',
+                'flex flex-1 flex-col items-center justify-center gap-1 min-h-[44px] px-1 py-1 transition-all rounded-lg',
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -126,7 +126,7 @@ export default function App() {
               >
                 <Icon size={20} className={isActive ? 'text-primary' : ''} />
               </div>
-              <span className={clsx('text-[10px] font-medium leading-none', isActive ? 'text-primary' : '')}>
+              <span className={clsx('text-[10px] font-medium leading-none text-center', isActive ? 'text-primary' : '')}>
                 {item.label}
               </span>
             </button>

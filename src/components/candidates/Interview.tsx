@@ -85,16 +85,16 @@ export default function Interview() {
   }, [toast]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-zinc-900">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight gradient-text">Functional Interview</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight gradient-text">Functional Interview</h1>
           <p className="text-zinc-400 text-sm mt-1">Track candidates in the final technical evaluation phase.</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Candidates List Column */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -113,7 +113,7 @@ export default function Interview() {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="glass rounded-2xl p-4 bg-zinc-900/40 border border-zinc-800/60 hover:border-zinc-700 hover:bg-zinc-800/40 transition-all duration-300 flex items-center justify-between cursor-pointer group"
+                className="glass rounded-2xl p-4 bg-zinc-900/40 border border-zinc-800/60 hover:border-zinc-700 hover:bg-zinc-800/40 transition-all duration-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer group"
               >
                 <div>
                   <h4 className="font-medium text-zinc-100 group-hover:text-violet-400 transition-colors">{candidate.name}</h4>

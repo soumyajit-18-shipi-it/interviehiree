@@ -375,7 +375,7 @@ export default function TeamManagement() {
             placeholder="Search team, role, email..."
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-card border border-border rounded-xl focus:outline-none focus:border-primary transition-colors text-sm shadow-sm"
+            className="w-full pl-9 pr-4 min-h-[44px] py-2 bg-card border border-border rounded-xl focus:outline-none focus:border-primary transition-colors text-sm shadow-sm"
           />
         </div>
 
@@ -420,7 +420,7 @@ export default function TeamManagement() {
         className="bg-card rounded-3xl overflow-hidden border border-border shadow-sm"
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[760px] text-left text-sm">
             <thead className="bg-muted/30 border-b border-border">
               <tr>
                 <th className="px-6 py-4 font-bold text-muted-foreground">User</th>

@@ -24,36 +24,36 @@ export default function CandidateSidePanel({ candidate, onClose }: any) {
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="w-[600px] h-full bg-card border-l border-border shadow-2xl flex flex-col"
+          className="w-full sm:w-[600px] h-full bg-card border-l border-border shadow-2xl flex flex-col"
         >
           {/* Header */}
-          <div className="p-6 border-b border-border flex items-start justify-between bg-muted/30">
-            <div className="flex items-center gap-4">
+          <div className="p-4 sm:p-6 border-b border-border flex items-start justify-between bg-muted/30 gap-3">
+            <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
               <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center text-2xl font-bold border-2 border-primary/20">
                 {candidate?.name?.charAt(0) || 'C'}
               </div>
-              <div>
-                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-foreground flex flex-wrap items-center gap-2 break-words">
                   {candidate.name}
                   <span className="bg-success/10 text-success border border-success/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
                     {typeof candidate?.score === 'number' ? `${candidate.score}/100` : 'AI Reviewed'}
                   </span>
                 </h2>
-                <div className="text-sm text-muted-foreground mt-1 flex items-center gap-3">
+                <div className="text-sm text-muted-foreground mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 break-all">
                   <span className="flex items-center gap-1"><Mail size={14} /> {candidate.email}</span>
                   <span className="flex items-center gap-1"><Phone size={14} /> {candidate.phone || 'Phone unavailable'}</span>
                 </div>
               </div>
             </div>
             <div className="flex flex-col items-end gap-3">
-              <button onClick={onClose} className="p-2 bg-muted hover:bg-muted/80 rounded-full text-muted-foreground transition-colors">
+              <button onClick={onClose} className="p-2 min-h-[44px] min-w-[44px] bg-muted hover:bg-muted/80 rounded-full text-muted-foreground transition-colors">
                 <X size={18} />
               </button>
               <div className="flex items-center gap-2">
-                <button className="p-2 border border-border text-foreground hover:bg-muted rounded-lg transition-colors" title="Download Resume">
+                <button className="p-2 min-h-[44px] min-w-[44px] border border-border text-foreground hover:bg-muted rounded-lg transition-colors" title="Download Resume">
                   <Download size={16} />
                 </button>
-                <button className="p-2 border border-border text-foreground hover:bg-muted rounded-lg transition-colors" title="LinkedIn Profile">
+                <button className="p-2 min-h-[44px] min-w-[44px] border border-border text-foreground hover:bg-muted rounded-lg transition-colors" title="LinkedIn Profile">
                   <ExternalLink size={16} />
                 </button>
               </div>
@@ -61,12 +61,12 @@ export default function CandidateSidePanel({ candidate, onClose }: any) {
           </div>
 
           {/* Tabs */}
-          <div className="px-6 border-b border-border flex items-center gap-6 bg-card sticky top-0">
+          <div className="px-4 sm:px-6 border-b border-border flex items-center gap-3 sm:gap-6 bg-card sticky top-0 overflow-x-auto">
             {tabs.map(tab => (
               <button 
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={clsx("py-4 text-sm font-bold transition-colors relative", activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+                className={clsx("py-4 text-sm font-bold transition-colors relative whitespace-nowrap", activeTab === tab ? "text-primary" : "text-muted-foreground hover:text-foreground")}
               >
                 {tab}
                 {activeTab === tab && (
@@ -77,7 +77,7 @@ export default function CandidateSidePanel({ candidate, onClose }: any) {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 bg-muted/10">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/10">
             {activeTab === 'Profile' && (
               <div className="space-y-6">
                 <div className="bg-card border border-border rounded-2xl p-6">
@@ -87,7 +87,7 @@ export default function CandidateSidePanel({ candidate, onClose }: any) {
                   </p>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {(candidate?.facts ?? [
                     { label: 'Current Title', value: 'Not available' },
                     { label: 'Source', value: 'Not available' },
@@ -111,18 +111,18 @@ export default function CandidateSidePanel({ candidate, onClose }: any) {
           </div>
           
           {/* Footer Actions */}
-          <div className="p-6 border-t border-border bg-card flex items-center justify-between">
-            <button className="px-5 py-2.5 border border-border text-foreground rounded-xl text-sm font-bold hover:bg-muted transition-colors">
+          <div className="p-4 sm:p-6 border-t border-border bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <button className="w-full sm:w-auto px-5 min-h-[44px] py-2.5 border border-border text-foreground rounded-xl text-sm font-bold hover:bg-muted transition-colors">
               Reject
             </button>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
               <button 
                 onClick={() => setIsRescheduleOpen(true)}
-                className="px-5 py-2.5 border border-primary/20 bg-primary/5 text-primary rounded-xl text-sm font-bold hover:bg-primary/10 transition-colors"
+                className="w-full sm:w-auto px-5 min-h-[44px] py-2.5 border border-primary/20 bg-primary/5 text-primary rounded-xl text-sm font-bold hover:bg-primary/10 transition-colors"
               >
                 Reschedule
               </button>
-              <button className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
+              <button className="w-full sm:w-auto px-5 min-h-[44px] py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
                 Move to Next Round
               </button>
             </div>
