@@ -1,10 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, X, ShieldCheck, Palette, LayoutTemplate, Eye, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { clsx } from 'clsx';
 import {
   createCareerPageSetup,
-  deleteCareerPageMedia,
   ensureOrganizationId,
   getCareerPageSetup,
   listCareerPageMedia,
@@ -20,39 +18,30 @@ interface CareerPageSetupProps {
 
 export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProps) {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('Theme');
   const [organizationId, setOrganizationId] = useState('');
+  
+  const [companyName, setCompanyName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState('');
+  const [location, setLocation] = useState('');
+  const [subheadline, setSubheadline] = useState(''); // using this for Description
+  
   const [brandColor, setBrandColor] = useState('#6B46FF');
-  const [companyName, setCompanyName] = useState('Acme Corporation');
   const [headline, setHeadline] = useState('Join us in building the future.');
-  const [subheadline, setSubheadline] = useState('We are a fast-growing tech startup dedicated to solving hard problems.');
-  const [slug, setSlug] = useState('careers');
   const [setupExists, setSetupExists] = useState(false);
-  const [mediaItems, setMediaItems] = useState<Array<{
-    id: string;
-    media_type: string;
-    title: string;
-    media_file?: string | null;
-    alt_text?: string;
-  }>>([]);
   const [selectedLogo, setSelectedLogo] = useState<File | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
-  const brandColorPreview = brandColor.trim() || '#6B46FF';
-  const brandColorText = brandColorPreview.toUpperCase();
-
   const loadMedia = async (nextSlug: string) => {
     if (!nextSlug.trim()) {
-      setMediaItems([]);
       return;
     }
-
     try {
-      const response = await listCareerPageMedia(nextSlug, { page_size: 100 });
-      setMediaItems(response.results);
+      await listCareerPageMedia(nextSlug, { page_size: 100 });
+      // We don't display media list in the new UI, so we just fetch it or omit it
     } catch (error) {
       console.error(error);
-      setMediaItems([]);
     }
   };
 
@@ -66,6 +55,7 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
         const orgId = await ensureOrganizationId();
         setOrganizationId(orgId);
         const setup = await getCareerPageSetup(orgId);
+        
         setBrandColor(setup.brand_color || '#6B46FF');
         setHeadline(setup.headline || headline);
         setSubheadline(setup.subheadline || subheadline);
@@ -76,7 +66,6 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
         }
       } catch {
         setSetupExists(false);
-        setMediaItems([]);
       }
     };
 
@@ -90,25 +79,24 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
         return;
       }
       if (!slug.trim()) {
-        toast('Career page slug cannot be blank.', 'error');
+        toast('Domain (slug) cannot be blank.', 'error');
         return;
       }
+      
+      const payload = {
+        headline,
+        subheadline, // storing description here
+        slug: slug.trim(),
+        is_live: true,
+        brand_color: brandColor,
+      };
+
       if (setupExists) {
-        await updateCareerPageSetup(organizationId, {
-          headline,
-          subheadline,
-          slug: slug.trim(),
-          is_live: true,
-          brand_color: brandColor,
-        });
+        await updateCareerPageSetup(organizationId, payload);
       } else {
         await createCareerPageSetup({
           organization: organizationId,
-          headline,
-          subheadline,
-          slug: slug.trim(),
-          is_live: true,
-          brand_color: brandColor,
+          ...payload
         });
       }
 
@@ -124,7 +112,6 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
         });
       }
 
-      await loadMedia(slug.trim());
       setSelectedLogo(null);
       toast('Career page settings saved.', 'success');
       onClose();
@@ -136,23 +123,6 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
     }
   };
 
-  const handleDeleteMedia = async (mediaId: string) => {
-    try {
-      await deleteCareerPageMedia(slug.trim(), mediaId);
-      toast('Career media deleted.', 'success');
-      await loadMedia(slug.trim());
-    } catch (error) {
-      console.error(error);
-      toast('Unable to delete career media.', 'error');
-    }
-  };
-
-  const tabs = [
-    { id: 'Theme', icon: Palette },
-    { id: 'Content', icon: LayoutTemplate },
-    { id: 'Preview', icon: Eye },
-  ];
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -160,246 +130,135 @@ export default function CareerPageSetup({ isOpen, onClose }: CareerPageSetupProp
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 10 }}
             transition={{ type: 'spring', bounce: 0.2, duration: 0.4 }}
-            className="bg-card rounded-3xl w-full max-w-3xl border border-border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-xl w-full max-w-2xl shadow-2xl flex flex-col relative"
           >
-            {/* Header */}
-            <div className="p-6 border-b border-border flex items-center justify-between bg-muted/20">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
-                  <ShieldCheck size={24} />
+            <button 
+              onClick={onClose}
+              className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="px-8 pt-8 pb-4 text-center">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">
+                Setup {companyName ? `${companyName}'s` : "Organization's"} Career Page
+              </h2>
+              <p className="text-sm text-gray-500 max-w-lg mx-auto">
+                Provide the details below to set up a fully customized, AI-powered career page for your organization.
+              </p>
+            </div>
+
+            <div className="px-8 py-2 space-y-5 overflow-y-auto max-h-[65vh]">
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm text-gray-700 font-medium mb-1.5">Organization Name</label>
+                  <input 
+                    type="text" 
+                    value={companyName}
+                    onChange={e => setCompanyName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6B46FF]/50 focus:border-[#6B46FF] text-gray-900 text-sm"
+                  />
                 </div>
                 <div>
-                  <h3 className="font-bold text-xl text-foreground">Career Page Setup</h3>
-                  <p className="text-muted-foreground text-xs font-medium mt-0.5">Customize your public-facing AI job board.</p>
+                  <label className="block text-sm text-gray-700 font-medium mb-1.5">Enter Domain</label>
+                  <input 
+                    type="text" 
+                    value={slug}
+                    onChange={e => setSlug(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6B46FF]/50 focus:border-[#6B46FF] text-gray-900 text-sm"
+                  />
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-3 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-muted transition-colors">
-                  <LinkIcon size={14} /> Copy Embed
-                </button>
-                  <button
-                    onClick={() => window.open(`/career-pages/career-page/${slug}/`, '_blank')}
-                    className="flex items-center gap-2 px-3 py-1.5 border border-primary/20 bg-primary/5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
-                  >
-                  <ExternalLink size={14} /> View Live
-                </button>
-                <div className="w-px h-6 bg-border mx-1"></div>
-                <button 
-                  onClick={onClose}
-                  className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
-                >
-                  <X size={18} />
-                </button>
+              
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm text-gray-700 font-medium mb-1.5">Organization Contact Email</label>
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6B46FF]/50 focus:border-[#6B46FF] text-gray-900 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-700 font-medium mb-1.5">Organization Website Link</label>
+                  <input 
+                    type="url" 
+                    value={website}
+                    onChange={e => setWebsite(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6B46FF]/50 focus:border-[#6B46FF] text-gray-900 text-sm"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Navigation Tabs */}
-            <div className="px-6 border-b border-border bg-card">
-              <div className="flex items-center gap-6">
-                {tabs.map(tab => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={clsx(
-                        "flex items-center gap-2 py-4 border-b-2 transition-colors",
-                        activeTab === tab.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <Icon size={16} />
-                      <span className="text-sm font-bold">{tab.id}</span>
-                    </button>
-                  );
-                })}
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm text-gray-700 font-medium mb-1.5">Organization Location</label>
+                  <input 
+                    type="text" 
+                    value={location}
+                    onChange={e => setLocation(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6B46FF]/50 focus:border-[#6B46FF] text-gray-900 text-sm"
+                  />
+                </div>
+                <div></div>
               </div>
-            </div>
 
-            {/* Content Area */}
-            <div className="p-6 overflow-y-auto flex-1 bg-card/50">
-              {activeTab === 'Theme' && (
-                <div className="space-y-6 max-w-md mx-auto">
-                  <label className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-border rounded-3xl bg-muted/30 hover:border-primary/40 transition-colors cursor-pointer group">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0] ?? null;
-                        setSelectedLogo(file);
-                      }}
+              <div>
+                <label className="block text-sm text-gray-700 font-medium mb-1.5">Organization Logo</label>
+                <div className="flex items-center gap-3">
+                  <label className="px-3 py-1.5 border border-gray-400 bg-gray-50 text-gray-800 rounded flex items-center cursor-pointer hover:bg-gray-100 text-sm font-medium transition-colors">
+                    Choose file
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={e => setSelectedLogo(e.target.files?.[0] || null)}
+                      className="hidden" 
                     />
-                    <div className="p-4 bg-background rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                      <Upload size={24} className="text-primary" />
-                    </div>
-                    <span className="text-sm font-bold text-foreground">Upload Company Logo</span>
-                    <span className="text-xs font-medium text-muted-foreground mt-1">PNG, JPG up to 5MB</span>
-                    {selectedLogo ? (
-                      <span className="mt-2 text-xs font-semibold text-primary">{selectedLogo.name}</span>
-                    ) : null}
                   </label>
+                  <span className="text-sm text-gray-500">
+                    {selectedLogo ? selectedLogo.name : "No file chosen"}
+                  </span>
+                </div>
+              </div>
 
-                  {mediaItems.length > 0 ? (
-                    <div className="space-y-2">
-                      <p className="text-xs font-bold text-foreground uppercase tracking-wider">Uploaded Media</p>
-                      {mediaItems.map((media) => (
-                        <div key={media.id} className="p-3 rounded-xl border border-border bg-background flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">{media.title}</p>
-                            <p className="text-xs text-muted-foreground">{media.media_type}</p>
-                          </div>
-                          <button
-                            onClick={() => void handleDeleteMedia(media.id)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-danger bg-danger/10 border border-danger/20 hover:bg-danger/20 transition-colors"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
+              <div>
+                <label className="block text-sm text-gray-700 font-medium mb-1.5">Organization Description</label>
+                <textarea 
+                  rows={4}
+                  value={subheadline}
+                  onChange={e => setSubheadline(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6B46FF]/50 focus:border-[#6B46FF] text-gray-900 text-sm resize-none"
+                />
+              </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-foreground mb-2">BRAND COLORS</label>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                      <label className="flex items-center gap-3 p-2 border border-border rounded-xl bg-background flex-1">
-                        <input
-                          type="color"
-                          value={brandColorPreview}
-                          onChange={(e) => setBrandColor(e.target.value)}
-                          className="h-10 w-12 rounded-lg border border-border bg-transparent p-1 cursor-pointer"
-                          aria-label="Brand color picker"
-                        />
-                        <input
-                          type="text"
-                          value={brandColorText}
-                          onChange={(e) => setBrandColor(e.target.value)}
-                          className="bg-transparent border-none text-sm font-medium focus:outline-none uppercase w-full"
-                          aria-label="Brand color hex value"
-                        />
-                      </label>
-                      <button
-                        onClick={() => setBrandColor('#6B46FF')}
-                        className="px-4 py-3 bg-muted rounded-xl text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                    <div className="mt-3 flex items-center gap-3 rounded-2xl border border-border bg-background px-4 py-3">
-                      <div
-                        className="w-10 h-10 rounded-xl shadow-sm border border-black/10"
-                        style={{ backgroundColor: brandColorPreview }}
-                      />
-                      <div className="min-w-0">
-                        <div className="text-[10px] uppercase tracking-[0.24em] text-muted-foreground font-semibold">
-                          Preview
-                        </div>
-                        <div className="text-sm font-semibold text-foreground truncate">{brandColorText}</div>
-                      </div>
-                    </div>
-                  </div>
+              {slug && (
+                <div className="p-3 bg-[#F0FDF4] text-[#15803D] text-sm rounded-md font-medium text-center border border-[#DCFCE7]">
+                  Career page will be live on <span className="font-semibold">{slug}.ai/jobs</span>
                 </div>
               )}
-
-              {activeTab === 'Content' && (
-                <div className="space-y-5 max-w-lg mx-auto">
-                  <div>
-                    <label className="block text-xs font-bold text-foreground mb-1.5">COMPANY NAME</label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-foreground mb-1.5">HERO TITLE</label>
-                    <input
-                      type="text"
-                      value={headline}
-                      onChange={(e) => setHeadline(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-foreground mb-1.5">ABOUT US</label>
-                    <textarea
-                      rows={4}
-                      value={subheadline}
-                      onChange={(e) => setSubheadline(e.target.value)}
-                      className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium resize-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-foreground mb-1.5">CAREER PAGE SLUG</label>
-                    <input
-                      type="text"
-                      value={slug}
-                      onChange={(e) => setSlug(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary shadow-sm transition-colors text-sm font-medium"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'Preview' && (
-                <div className="h-full flex items-center justify-center p-4">
-                  <div className="w-full max-w-sm aspect-[9/16] bg-background border-4 border-border rounded-[2rem] shadow-xl overflow-hidden relative">
-                    {/* Fake Mobile Status Bar */}
-                    <div className="h-6 bg-background flex items-center justify-between px-4">
-                      <span className="text-[10px] font-bold">9:41</span>
-                      <div className="flex gap-1">
-                        <div className="w-1 h-2 bg-foreground rounded-full"></div>
-                        <div className="w-1 h-2 bg-foreground rounded-full"></div>
-                        <div className="w-1 h-2 bg-foreground rounded-full"></div>
-                      </div>
-                    </div>
-                    {/* Preview Content */}
-                    <div className="p-6 text-center space-y-4">
-                      <div
-                        className="w-16 h-16 text-white flex items-center justify-center rounded-2xl mx-auto font-black text-2xl shadow-lg"
-                        style={{ backgroundColor: brandColorPreview }}
-                      >
-                        A
-                      </div>
-                      <h4 className="font-black text-xl leading-tight text-foreground">{headline}</h4>
-                      <p className="text-xs text-muted-foreground">{subheadline}</p>
-                      
-                      <div className="mt-8 space-y-3">
-                        <div
-                          className="w-full h-12 rounded-xl border"
-                          style={{ backgroundColor: `${brandColorPreview}14`, borderColor: `${brandColorPreview}33` }}
-                        />
-                        <div className="w-full h-12 bg-muted rounded-xl"></div>
-                        <div className="w-full h-12 bg-muted rounded-xl"></div>
-                      </div>
-                    </div>
-                  </div>
+              {/* Note: if slug is empty, we should still show the banner but empty */}
+              {!slug && (
+                 <div className="p-3 bg-[#F0FDF4] text-[#15803D] text-sm rounded-md font-medium text-center border border-[#DCFCE7]">
+                  Career page will be live on <span className="font-semibold">your-domain.ai/jobs</span>
                 </div>
               )}
             </div>
 
-            {/* Footer */}
-            <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3 rounded-b-3xl">
-              <button 
-                onClick={onClose}
-                className="px-6 py-2.5 bg-card border border-border text-foreground hover:bg-muted rounded-xl text-sm font-bold transition-colors shadow-sm"
-              >
-                Cancel
-              </button>
+            <div className="px-8 pb-8 pt-4">
               <button 
                 onClick={saveSetup}
                 disabled={isUploadingLogo}
-                className="px-6 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-bold shadow-lg shadow-primary/20 transition-all cursor-pointer"
+                className="w-full py-3 bg-[#6B46FF] hover:bg-[#5A3AE0] text-white rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isUploadingLogo ? 'Uploading...' : 'Save Changes'}
+                {isUploadingLogo ? 'Saving...' : 'Continue'}
               </button>
             </div>
           </motion.div>

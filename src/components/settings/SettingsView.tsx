@@ -146,6 +146,7 @@ function CookieModal({
 // ---- Profile Tab ----
 function ProfileTab({ organizationId }: { organizationId: string }) {
   const { toast } = useToast();
+  const [appFont, setAppFont] = useState(() => localStorage.getItem('app-font') || 'Plus Jakarta Sans');
   const [profile, setProfile] = useState({
     firstName: 'Sarah',
     lastName: 'Connor',
@@ -190,9 +191,25 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
           location: profile.role,
         });
       }
+      
+      // Save and apply app font globally
+      localStorage.setItem('app-font', appFont);
+      const linkId = 'app-font-link';
+      let link = document.getElementById(linkId) as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.id = linkId;
+        link.rel = 'stylesheet';
+        document.head.appendChild(link);
+      }
+      link.href = `https://fonts.googleapis.com/css2?family=${appFont.replace(/ /g, '+')}:wght@400;500;600;700;800&display=swap`;
+      
+      document.documentElement.style.setProperty('--app-font-sans', `"${appFont}", sans-serif`);
+      document.body.style.fontFamily = `"${appFont}", sans-serif`;
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-      toast('Profile settings saved.', 'success');
+      toast('Profile preferences saved.', 'success');
     } catch (error) {
       console.error(error);
       toast('Failed to save profile settings.', 'error');
@@ -309,6 +326,29 @@ function ProfileTab({ organizationId }: { organizationId: string }) {
           onChange={e => setProfile({ ...profile, bio: e.target.value })}
           className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all resize-none"
         />
+      </div>
+
+      {/* App Font */}
+      <div>
+        <label className="block text-xs font-bold text-foreground mb-1.5 uppercase tracking-wider">App Font (Local)</label>
+        <select
+          value={appFont}
+          onChange={e => setAppFont(e.target.value)}
+          className="w-full px-4 py-2.5 bg-background border border-border rounded-xl focus:outline-none focus:border-primary text-sm text-foreground transition-all"
+        >
+          <option value="Plus Jakarta Sans">Plus Jakarta Sans (Default)</option>
+          <option value="Inter">Inter</option>
+          <option value="Roboto">Roboto</option>
+          <option value="Open Sans">Open Sans</option>
+          <option value="Lato">Lato</option>
+          <option value="Montserrat">Montserrat</option>
+          <option value="Poppins">Poppins</option>
+          <option value="Nunito">Nunito</option>
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Merriweather">Merriweather</option>
+          <option value="PT Serif">PT Serif</option>
+        </select>
+        <p className="text-xs text-muted-foreground mt-2">Changes the overall app font on this device once saved.</p>
       </div>
 
       <div className="flex justify-end">

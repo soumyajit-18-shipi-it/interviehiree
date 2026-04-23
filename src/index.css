@@ -52,10 +52,11 @@
   --sidebar-accent-foreground: #0d0d2b;
   --sidebar-border: #ddd6fe;
   --sidebar-ring: #4F46E5;
+  --app-font-sans: 'Plus Jakarta Sans', sans-serif;
 }
 
 @theme inline {
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-sans: var(--app-font-sans);
 
   --color-text-title: var(--color-text-title);
   --color-text-sub: var(--color-text-sub);
@@ -116,7 +117,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--app-font-sans);
     @apply antialiased transition-colors duration-300;
   }
 
@@ -128,7 +129,7 @@
   .recharts-wrapper,
   .recharts-surface,
   .recharts-text {
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: var(--app-font-sans);
   }
 }
 

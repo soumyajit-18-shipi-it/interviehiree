@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Sidebar from './components/layout/Sidebar';
 import MobileHeader from './components/layout/MobileHeader';
 import Dashboard from './components/dashboard/Dashboard';
@@ -22,22 +22,6 @@ const menuItems = [
 ];
 
 export default function App() {
-  useEffect(() => {
-    const savedFont = localStorage.getItem('app-font');
-    if (savedFont && savedFont !== 'Plus Jakarta Sans') {
-      const linkId = 'app-font-link';
-      let link = document.getElementById(linkId) as HTMLLinkElement;
-      if (!link) {
-        link = document.createElement('link');
-        link.id = linkId;
-        link.rel = 'stylesheet';
-        document.head.appendChild(link);
-      }
-      link.href = `https://fonts.googleapis.com/css2?family=${savedFont.replace(/ /g, '+')}:wght@400;500;600;700;800&display=swap`;
-      document.documentElement.style.setProperty('--app-font-sans', `"${savedFont}", sans-serif`);
-      document.body.style.fontFamily = `"${savedFont}", sans-serif`;
-    }
-  }, []);
   const [activeTab, setActiveTab] = useState('jobs');
   const [isCareerModalOpen, setIsCareerModalOpen] = useState(false);
 
